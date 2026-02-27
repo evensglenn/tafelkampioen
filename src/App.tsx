@@ -37,7 +37,7 @@ export default function App() {
   const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
   const [stats, setStats] = useState({ correct: 0, total: 0 });
   const [history, setHistory] = useState<{ exercise: Exercise; correct: boolean }[]>([]);
-  const [timeLeft, setTimeLeft] = useState(5);
+  const [timeLeft, setTimeLeft] = useState(15);
   
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -175,7 +175,7 @@ export default function App() {
 
   const startTimer = useCallback(() => {
     stopTimer();
-    setTimeLeft(5);
+    setTimeLeft(15);
     timerRef.current = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 0.05) {
@@ -364,9 +364,9 @@ export default function App() {
                 {/* Timer bar */}
                 <div className="absolute top-2 left-0 w-full h-1.5 bg-stone-50 overflow-hidden">
                   <motion.div 
-                    className={`h-full transition-colors duration-300 ${timeLeft < 2 ? 'bg-red-500' : 'bg-orange-400'}`}
+                    className={`h-full transition-colors duration-300 ${timeLeft < 3 ? 'bg-red-500' : 'bg-orange-400'}`}
                     initial={{ width: '100%' }}
-                    animate={{ width: `${(timeLeft / 5) * 100}%` }}
+                    animate={{ width: `${(timeLeft / 15) * 100}%` }}
                     transition={{ duration: 0.05, ease: 'linear' }}
                   />
                 </div>
