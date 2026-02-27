@@ -1,0 +1,13 @@
+{
+  "name": "Tafelkampioen",
+  "short_name": "Tafelkampioen",
+  "start_url": "/tafelkampioen/",
+  "scope": "/tafelkampioen/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    { "src": "/tafelkampioen/icons/icon-192-padded.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/tafelkampioen/icons/icon-512-padded.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
