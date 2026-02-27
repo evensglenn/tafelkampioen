@@ -533,8 +533,9 @@ export default function App() {
         </AnimatePresence>
       </main>
 
-      <footer className="mt-8 text-center text-stone-400 text-xs">
-        Gemaakt voor kleine kampioenen 🌟
+      <footer className="mt-8 text-center text-stone-400 text-xs space-y-1">
+        <p>Gemaakt voor kleine kampioenen 🌟</p>
+        <p>Deze app is met behulp van AI gemaakt door Glenn Evens.</p>
       </footer>
     </div>
   );
