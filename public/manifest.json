@@ -8,7 +8,7 @@
   "theme_color": "#059669",
   "icons": [
     {
-      "src": "favicon.svg",
+      "src": "/tafelkampioen/favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
