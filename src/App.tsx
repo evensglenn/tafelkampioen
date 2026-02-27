@@ -424,7 +424,7 @@ export default function App() {
                   <input
                     ref={inputRef}
                     autoFocus
-                    type="number"
+                    type="text"
                     inputMode="numeric"
                     pattern="[0-9]*"
                     value={userAnswer}
