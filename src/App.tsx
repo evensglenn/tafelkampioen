@@ -362,7 +362,7 @@ export default function App() {
                     <ChevronLeft className="w-6 h-6" />
                   </button>
                   <span className="font-bold text-stone-400">
-                    Vraag {stats.total + 1} van {totalExercises}
+                    Vraag {Math.min(stats.total + 1, totalExercises)} van {totalExercises}
                   </span>
                   <div className="w-10" />
                 </div>
