@@ -15,9 +15,11 @@ import {
   ChevronLeft,
   Calculator,
   Divide,
-  Sparkles
+  Sparkles,
+  User,
+  History
 } from 'lucide-react';
-import { Exercise, Operation, UserSettings, MasteryData } from './types';
+import { Exercise, Operation, UserSettings, MasteryData, SessionResult } from './types';
 
 const TABLES = Array.from({ length: 11 }, (_, i) => i);
 
@@ -25,11 +27,15 @@ export default function App() {
   const [mode, setMode] = useState<'settings' | 'practice' | 'results'>('settings');
   const [settings, setSettings] = useState<UserSettings>(() => {
     const saved = localStorage.getItem('tafel-settings');
-    return saved ? JSON.parse(saved) : { multiplicationTables: [], divisionTables: [], exerciseCount: 10 };
+    return saved ? JSON.parse(saved) : { playerName: '', multiplicationTables: [], divisionTables: [], exerciseCount: 10 };
   });
   const [mastery, setMastery] = useState<MasteryData>(() => {
     const saved = localStorage.getItem('tafel-mastery');
     return saved ? JSON.parse(saved) : {};
+  });
+  const [sessionHistory, setSessionHistory] = useState<SessionResult[]>(() => {
+    const saved = localStorage.getItem('tafel-session-history');
+    return saved ? JSON.parse(saved) : [];
   });
   
   const [currentExercise, setCurrentExercise] = useState<Exercise | null>(null);
@@ -101,6 +107,15 @@ export default function App() {
 
     setTimeout(() => {
       if (nextStats.total >= totalExercises) {
+        // Save to session history
+        const result: SessionResult = {
+          id: crypto.randomUUID(),
+          playerName: settings.playerName || 'Anoniem',
+          correct: nextStats.correct,
+          total: nextStats.total,
+          timestamp: Date.now(),
+        };
+        setSessionHistory(prev => [result, ...prev].slice(0, 5)); // Keep last 5
         setMode('results');
       } else {
         setExercisePool(prev => prev.slice(1));
@@ -162,6 +177,10 @@ export default function App() {
     localStorage.setItem('tafel-mastery', JSON.stringify(mastery));
   }, [mastery]);
 
+  useEffect(() => {
+    localStorage.setItem('tafel-session-history', JSON.stringify(sessionHistory));
+  }, [sessionHistory]);
+
   const toggleTable = (num: number, op: Operation) => {
     setSettings(prev => {
       const key = op === 'multiplication' ? 'multiplicationTables' : 'divisionTables';
@@ -174,6 +193,10 @@ export default function App() {
   };
 
   const startPractice = () => {
+    if (!settings.playerName.trim()) {
+      alert('Vul eerst je naam in!');
+      return;
+    }
     if (settings.multiplicationTables.length === 0 && settings.divisionTables.length === 0) {
       alert('Kies eerst minstens één tafel om te oefenen!');
       return;
@@ -240,10 +263,23 @@ export default function App() {
             >
               <div className="glass rounded-3xl p-6 space-y-6">
                 <h2 className="text-xl font-semibold flex items-center gap-2 text-stone-700">
-                  <Settings className="w-5 h-5" /> Welke tafels ken je al?
+                  <Settings className="w-5 h-5" /> Instellingen
                 </h2>
 
                 <div className="space-y-6">
+                  <div>
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-stone-400 mb-3 flex items-center gap-2">
+                      <User className="w-4 h-4" /> Naam van de speler
+                    </h3>
+                    <input
+                      type="text"
+                      value={settings.playerName}
+                      onChange={(e) => setSettings(prev => ({ ...prev, playerName: e.target.value }))}
+                      placeholder="Typ je naam..."
+                      className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent focus:border-purple-400 focus:bg-white outline-none transition-all font-medium text-stone-700"
+                    />
+                  </div>
+
                   <div>
                     <h3 className="text-sm font-bold uppercase tracking-wider text-stone-400 mb-3 flex items-center gap-2">
                       <Calculator className="w-4 h-4" /> Vermenigvuldigen (×)
@@ -321,6 +357,27 @@ export default function App() {
                   Start Oefenen!
                 </button>
               </div>
+
+              {sessionHistory.length > 0 && (
+                <div className="glass rounded-3xl p-6 space-y-4">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-stone-400 flex items-center gap-2">
+                    <History className="w-4 h-4" /> Laatste resultaten
+                  </h3>
+                  <div className="space-y-2">
+                    {sessionHistory.map((result) => (
+                      <div 
+                        key={result.id}
+                        className="flex items-center justify-between py-2 px-4 bg-white/50 rounded-xl border border-stone-100"
+                      >
+                        <span className="font-bold text-stone-700">{result.playerName}</span>
+                        <span className="font-mono font-bold text-emerald-600">
+                          {result.correct} / {result.total}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </motion.div>
           )}
 
@@ -453,8 +510,8 @@ export default function App() {
                     <Sparkles className="w-8 h-8 text-yellow-400" />
                   </motion.div>
                 </div>
-                <h2 className="text-3xl font-bold text-stone-800">Echt een Einstein!</h2>
-                <p className="text-stone-500">Je bent een rekenwonder.</p>
+                <h2 className="text-3xl font-bold text-stone-800">Goed gedaan, {settings.playerName}!</h2>
+                <p className="text-stone-500">Je bent echt een Einstein.</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

@@ -10,9 +10,18 @@ export interface Exercise {
 }
 
 export interface UserSettings {
+  playerName: string;
   multiplicationTables: number[];
   divisionTables: number[];
   exerciseCount: 10 | 20 | 50 | 'all';
+}
+
+export interface SessionResult {
+  id: string;
+  playerName: string;
+  correct: number;
+  total: number;
+  timestamp: number;
 }
 
 export interface MasteryData {
