@@ -25,7 +25,7 @@ export default function App() {
   const [mode, setMode] = useState<'settings' | 'practice' | 'results'>('settings');
   const [settings, setSettings] = useState<UserSettings>(() => {
     const saved = localStorage.getItem('tafel-settings');
-    return saved ? JSON.parse(saved) : { multiplicationTables: [], divisionTables: [] };
+    return saved ? JSON.parse(saved) : { multiplicationTables: [], divisionTables: [], exerciseCount: 10 };
   });
   const [mastery, setMastery] = useState<MasteryData>(() => {
     const saved = localStorage.getItem('tafel-mastery');
@@ -39,6 +39,10 @@ export default function App() {
   const [history, setHistory] = useState<{ exercise: Exercise; correct: boolean }[]>([]);
   const [timeLeft, setTimeLeft] = useState(15);
   
+  const totalExercises = settings.exerciseCount === 'all' 
+    ? (settings.multiplicationTables.length + settings.divisionTables.length) * 11
+    : settings.exerciseCount;
+
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -171,7 +175,7 @@ export default function App() {
     setHistory(prev => [...prev, { exercise: currentExercise, correct: isCorrect }]);
 
     setTimeout(() => {
-      if (nextStats.total >= 10) {
+      if (nextStats.total >= totalExercises) {
         setMode('results');
       } else {
         const next = generateExercise(currentExercise);
@@ -343,6 +347,28 @@ export default function App() {
                   </div>
                 </div>
 
+                <div className="pt-6 border-t border-stone-100">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-stone-400 mb-4 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" /> Aantal sommen
+                  </h3>
+                  <div className="grid grid-cols-4 gap-2">
+                    {([10, 20, 50, 'all'] as const).map(count => (
+                      <button
+                        key={`count-${count}`}
+                        onClick={() => setSettings(prev => ({ ...prev, exerciseCount: count }))}
+                        className={`
+                          h-12 rounded-xl font-bold transition-all duration-200
+                          ${settings.exerciseCount === count
+                            ? 'bg-purple-500 text-white shadow-lg shadow-purple-200 scale-105'
+                            : 'bg-stone-100 text-stone-400 hover:bg-stone-200'}
+                        `}
+                      >
+                        {count === 'all' ? 'Alle' : count}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <button
                   onClick={startPractice}
                   className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold text-xl shadow-xl shadow-emerald-100 hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 group"
@@ -367,7 +393,7 @@ export default function App() {
                   <motion.div 
                     className="h-full bg-emerald-500"
                     initial={{ width: 0 }}
-                    animate={{ width: `${(stats.total / 10) * 100}%` }}
+                    animate={{ width: `${(stats.total / totalExercises) * 100}%` }}
                   />
                 </div>
                 
@@ -391,7 +417,9 @@ export default function App() {
                   >
                     <ChevronLeft className="w-6 h-6" />
                   </button>
-                  <span className="font-bold text-stone-400">Vraag {stats.total + 1} van 10</span>
+                  <span className="font-bold text-stone-400">
+                    Vraag {stats.total + 1} van {totalExercises}
+                  </span>
                   <div className="w-10" />
                 </div>
 

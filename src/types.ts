@@ -12,6 +12,7 @@ export interface Exercise {
 export interface UserSettings {
   multiplicationTables: number[];
   divisionTables: number[];
+  exerciseCount: 10 | 20 | 50 | 'all';
 }
 
 export interface MasteryData {
