@@ -33,6 +33,7 @@ export default function App() {
   });
   
   const [currentExercise, setCurrentExercise] = useState<Exercise | null>(null);
+  const [exercisePool, setExercisePool] = useState<Exercise[]>([]);
   const [userAnswer, setUserAnswer] = useState('');
   const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
   const [stats, setStats] = useState({ correct: 0, total: 0 });
@@ -45,98 +46,7 @@ export default function App() {
 
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-
-  const generateExercise = useCallback((previous?: Exercise | null) => {
-    const availableOps: Operation[] = [];
-    if (settings.multiplicationTables.length > 0) availableOps.push('multiplication');
-    if (settings.divisionTables.length > 0) availableOps.push('division');
-
-    if (availableOps.length === 0) return null;
-
-    let attempts = 0;
-    while (attempts < 20) {
-      attempts++;
-      // Pick operation
-      const op = availableOps[Math.floor(Math.random() * availableOps.length)];
-      const selectedTables = op === 'multiplication' ? settings.multiplicationTables : settings.divisionTables;
-      
-      // Weighted selection: tables with lower mastery are picked more often
-      const weights = selectedTables.map(t => {
-        const score = mastery[`${op}-${t}`] || 0;
-        return 11 - score;
-      });
-      
-      const totalWeight = weights.reduce((a, b) => a + b, 0);
-      let random = Math.random() * totalWeight;
-      let tableIndex = 0;
-      for (let i = 0; i < weights.length; i++) {
-        random -= weights[i];
-        if (random <= 0) {
-          tableIndex = i;
-          break;
-        }
-      }
-      
-      const table = selectedTables[tableIndex];
-      const score = mastery[`${op}-${table}`] || 0;
-      let next: Exercise;
-
-      if (op === 'multiplication') {
-        if (score > 8 && Math.random() > 0.5) {
-          // Challenge: Larger numbers or multi-step
-          if (Math.random() > 0.5) {
-            const other = 11 + Math.floor(Math.random() * 5); // 11 to 15
-            next = { a: table, b: other, op, result: table * other, isChallenge: true };
-          } else {
-            const b = Math.floor(Math.random() * 11);
-            const c = 1 + Math.floor(Math.random() * 10);
-            next = { 
-              a: table, b, op, 
-              result: (table * b) + c, 
-              display: `(${table} × ${b}) + ${c}`,
-              isChallenge: true 
-            };
-          }
-        } else if (score < 3) {
-          // Simple multipliers
-          const simple = [0, 1, 2, 5, 10];
-          const other = simple[Math.floor(Math.random() * simple.length)];
-          const [a, b] = Math.random() > 0.5 ? [table, other] : [other, table];
-          next = { a, b, op, result: a * b };
-        } else {
-          // Normal
-          const other = Math.floor(Math.random() * 11);
-          const [a, b] = Math.random() > 0.5 ? [table, other] : [other, table];
-          next = { a, b, op, result: a * b };
-        }
-      } else {
-        // Division
-        if (score > 8 && Math.random() > 0.5) {
-          // Challenge: Larger dividends
-          const b = 11 + Math.floor(Math.random() * 5);
-          const a = table * b;
-          next = { a, b: table, op, result: b, isChallenge: true };
-        } else if (score < 3) {
-          // Simple quotients
-          const simple = [1, 2, 5, 10];
-          const b = simple[Math.floor(Math.random() * simple.length)];
-          const a = table * b;
-          next = { a, b: table, op, result: b };
-        } else {
-          // Normal
-          const b = Math.floor(Math.random() * 11);
-          const a = table * b;
-          next = { a, b: table, op, result: b };
-        }
-      }
-
-      // Check if different from previous
-      if (!previous || (next.a !== previous.a && next.b !== previous.b && next.result !== previous.result)) {
-        return next;
-      }
-    }
-    return null; // Should not happen with enough attempts
-  }, [settings, mastery]);
+  const handleAnswerRef = useRef<(answer: string | null) => void>(() => {});
 
   const stopTimer = useCallback(() => {
     if (timerRef.current) {
@@ -144,6 +54,21 @@ export default function App() {
       timerRef.current = null;
     }
   }, []);
+
+  const startTimer = useCallback(() => {
+    stopTimer();
+    setTimeLeft(15);
+    timerRef.current = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 0.05) {
+          stopTimer();
+          handleAnswerRef.current(null); // Timeout
+          return 0;
+        }
+        return prev - 0.05;
+      });
+    }, 50);
+  }, [stopTimer]);
 
   const handleAnswer = useCallback((answer: string | null) => {
     if (!currentExercise || feedback) return;
@@ -178,29 +103,24 @@ export default function App() {
       if (nextStats.total >= totalExercises) {
         setMode('results');
       } else {
-        const next = generateExercise(currentExercise);
-        setCurrentExercise(next);
+        setExercisePool(prev => prev.slice(1));
+        setCurrentExercise(null); // Clear current to trigger useEffect
         setUserAnswer('');
         setFeedback(null);
         startTimer();
       }
     }, 1000);
-  }, [currentExercise, feedback, stats, generateExercise]);
+  }, [currentExercise, feedback, stats, totalExercises, startTimer, stopTimer, settings.multiplicationTables]);
 
-  const startTimer = useCallback(() => {
-    stopTimer();
-    setTimeLeft(15);
-    timerRef.current = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 0.05) {
-          stopTimer();
-          handleAnswer(null); // Timeout
-          return 0;
-        }
-        return prev - 0.05;
-      });
-    }, 50);
-  }, [stopTimer, handleAnswer]);
+  useEffect(() => {
+    handleAnswerRef.current = handleAnswer;
+  }, [handleAnswer]);
+
+  useEffect(() => {
+    if (mode === 'practice' && !currentExercise && exercisePool.length > 0) {
+      setCurrentExercise(exercisePool[0]);
+    }
+  }, [mode, currentExercise, exercisePool]);
 
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -258,10 +178,34 @@ export default function App() {
       alert('Kies eerst minstens één tafel om te oefenen!');
       return;
     }
+
+    // Generate pool
+    const pool: Exercise[] = [];
+    
+    settings.multiplicationTables.forEach(table => {
+      for (let i = 0; i <= 10; i++) {
+        pool.push({ a: table, b: i, op: 'multiplication', result: table * i });
+      }
+    });
+
+    settings.divisionTables.forEach(table => {
+      for (let i = 0; i <= 10; i++) {
+        pool.push({ a: table * i, b: table, op: 'division', result: i });
+      }
+    });
+
+    // Shuffle pool
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+
+    const finalPool = settings.exerciseCount === 'all' ? pool : pool.slice(0, settings.exerciseCount);
+
     setStats({ correct: 0, total: 0 });
     setHistory([]);
-    const first = generateExercise();
-    setCurrentExercise(first);
+    setExercisePool(finalPool);
+    setCurrentExercise(finalPool[0]);
     setMode('practice');
     setUserAnswer('');
     setFeedback(null);
