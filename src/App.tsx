@@ -44,12 +44,9 @@ export default function App() {
   const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
   const [stats, setStats] = useState({ correct: 0, total: 0 });
   const [history, setHistory] = useState<{ exercise: Exercise; correct: boolean }[]>([]);
+  const [activeTotal, setActiveTotal] = useState(0);
   const [timeLeft, setTimeLeft] = useState(15);
   
-  const totalExercises = settings.exerciseCount === 'all' 
-    ? (settings.multiplicationTables.length + settings.divisionTables.length) * 11
-    : settings.exerciseCount;
-
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const handleAnswerRef = useRef<(answer: string | null) => void>(() => {});
@@ -106,7 +103,7 @@ export default function App() {
     setHistory(prev => [...prev, { exercise: currentExercise, correct: isCorrect }]);
 
     setTimeout(() => {
-      if (nextStats.total >= totalExercises) {
+      if (nextStats.total >= activeTotal) {
         // Save to session history
         const result: SessionResult = {
           id: crypto.randomUUID(),
@@ -125,7 +122,7 @@ export default function App() {
         startTimer();
       }
     }, 1000);
-  }, [currentExercise, feedback, stats, totalExercises, startTimer, stopTimer, settings.multiplicationTables]);
+  }, [currentExercise, feedback, stats, activeTotal, startTimer, stopTimer, settings.multiplicationTables, settings.playerName]);
 
   useEffect(() => {
     handleAnswerRef.current = handleAnswer;
@@ -227,8 +224,31 @@ export default function App() {
 
     setStats({ correct: 0, total: 0 });
     setHistory([]);
+    setActiveTotal(finalPool.length);
     setExercisePool(finalPool);
     setCurrentExercise(finalPool[0]);
+    setMode('practice');
+    setUserAnswer('');
+    setFeedback(null);
+    startTimer();
+  };
+
+  const retryMistakes = () => {
+    const mistakes = history.filter(h => !h.correct).map(h => h.exercise);
+    if (mistakes.length === 0) return;
+
+    // Shuffle mistakes
+    const pool = [...mistakes];
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+
+    setStats({ correct: 0, total: 0 });
+    setHistory([]);
+    setActiveTotal(pool.length);
+    setExercisePool(pool);
+    setCurrentExercise(pool[0]);
     setMode('practice');
     setUserAnswer('');
     setFeedback(null);
@@ -394,7 +414,7 @@ export default function App() {
                   <motion.div 
                     className="h-full bg-emerald-500"
                     initial={{ width: 0 }}
-                    animate={{ width: `${(stats.total / totalExercises) * 100}%` }}
+                    animate={{ width: `${(stats.total / activeTotal) * 100}%` }}
                   />
                 </div>
                 
@@ -419,7 +439,7 @@ export default function App() {
                     <ChevronLeft className="w-6 h-6" />
                   </button>
                   <span className="font-bold text-stone-400">
-                    Vraag {Math.min(stats.total + 1, totalExercises)} van {totalExercises}
+                    Vraag {Math.min(stats.total + 1, activeTotal)} van {activeTotal}
                   </span>
                   <div className="w-10" />
                 </div>
@@ -526,11 +546,19 @@ export default function App() {
               </div>
 
               <div className="space-y-3">
+                {stats.total - stats.correct > 0 && (
+                  <button
+                    onClick={retryMistakes}
+                    className="w-full py-4 bg-purple-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:bg-purple-700 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <RotateCcw className="w-5 h-5" /> Fouten opnieuw maken
+                  </button>
+                )}
                 <button
                   onClick={startPractice}
                   className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2"
                 >
-                  <RotateCcw className="w-5 h-5" /> Nog een keer!
+                  <RotateCcw className="w-5 h-5" /> Alles opnieuw!
                 </button>
                 <button
                   onClick={() => setMode('settings')}
