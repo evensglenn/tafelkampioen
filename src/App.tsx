@@ -87,15 +87,30 @@ export default function App() {
 
   const playSuccessSound = useCallback(async () => {
     const githubUrl = 'https://raw.githubusercontent.com/evensglenn/tafelkampioen/main/public/success.mp3';
-    const baseUrl = import.meta.env.BASE_URL || '/';
-    const localUrl = (baseUrl + '/success.mp3').replace(/\/+/g, '/');
     
+    // Bepaal het absolute pad naar het lokale bestand
+    const getLocalUrl = () => {
+      const baseUrl = import.meta.env.BASE_URL || '/';
+      const path = (baseUrl + '/success.mp3').replace(/\/+/g, '/');
+      return new URL(path, window.location.origin).href;
+    };
+
     const loadAndPlay = async (url: string) => {
-      console.log('Laden van audio via buffer:', url);
+      console.log('Poging tot laden:', url);
       const response = await fetch(url);
-      if (!response.ok) throw new Error(`Fetch mislukt: ${response.status}`);
       
+      if (!response.ok) throw new Error(`Server fout: ${response.status}`);
+      
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('text/html')) {
+        throw new Error('Ontvangen data is HTML (waarschijnlijk een 404 pagina), geen audio.');
+      }
+
       const arrayBuffer = await response.arrayBuffer();
+      if (arrayBuffer.byteLength < 1000) {
+        throw new Error('Bestand is te klein om audio te zijn (corrupt of 404).');
+      }
+
       const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
       const context = new AudioContext();
       
@@ -104,17 +119,19 @@ export default function App() {
       source.buffer = audioBuffer;
       source.connect(context.destination);
       source.start(0);
-      console.log('Audio buffer succesvol gestart');
+      console.log('Audio succesvol gestart!');
     };
 
     try {
-      await loadAndPlay(localUrl);
+      // Probeer eerst lokaal
+      await loadAndPlay(getLocalUrl());
     } catch (e) {
-      console.warn('Lokale buffer mislukt, proberen via GitHub...', e);
+      console.warn('Lokaal mislukt, proberen via GitHub...', e instanceof Error ? e.message : e);
       try {
+        // Dan via GitHub
         await loadAndPlay(githubUrl);
       } catch (e2) {
-        console.error('Alle audio-methoden zijn mislukt:', e2);
+        console.error('Alle audio-pogingen mislukt:', e2 instanceof Error ? e2.message : e2);
       }
     }
   }, []);
@@ -665,7 +682,7 @@ export default function App() {
       <footer className="mt-8 text-center text-stone-400 text-xs space-y-1">
         <p>Gemaakt voor kleine kampioenen 🌟</p>
         <p>Deze app is met behulp van AI gemaakt door Glenn Evens.</p>
-        <p className="opacity-50 pt-2">v1.2.6</p>
+        <p className="opacity-50 pt-2">v1.2.7</p>
       </footer>
     </div>
   );
