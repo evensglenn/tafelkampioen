@@ -85,18 +85,20 @@ export default function App() {
     }, 50);
   }, [stopTimer]);
 
+  const [audioStatus, setAudioStatus] = useState<string>('');
+
   const playSuccessSound = useCallback(async () => {
-    const githubUrl = 'https://raw.githubusercontent.com/evensglenn/tafelkampioen/main/public/success.mp3';
-    const publicFallbackUrl = 'https://cdn.pixabay.com/audio/2021/08/04/audio_0625c153b0.mp3'; // Betrouwbare Pixabay link
+    const t = Date.now();
+    const githubUrl = `https://raw.githubusercontent.com/evensglenn/tafelkampioen/main/public/success.mp3?v=${t}`;
+    const publicFallbackUrl = `https://www.soundjay.com/buttons/sounds/button-10.mp3?v=${t}`;
     const baseUrl = import.meta.env.BASE_URL || '/';
-    const localUrl = (window.location.origin + baseUrl + '/success.mp3').replace(/([^:]\/)\/+/g, "$1");
+    const localUrl = (window.location.origin + baseUrl + `/success.mp3?v=${t}`).replace(/([^:]\/)\/+/g, "$1");
 
     const playSynthesized = () => {
       try {
         const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
         const context = new AudioContext();
         const now = context.currentTime;
-        
         const playNote = (freq: number, start: number, duration: number, type: 'sine' | 'square' | 'sawtooth' | 'triangle' = 'triangle') => {
           const osc = context.createOscillator();
           const gain = context.createGain();
@@ -109,26 +111,27 @@ export default function App() {
           osc.start(start);
           osc.stop(start + duration);
         };
-
-        // Vrolijker "Tada!" deuntje
-        playNote(523.25, now, 0.15);       // C5
-        playNote(659.25, now + 0.1, 0.15);  // E5
-        playNote(783.99, now + 0.2, 0.15);  // G5
-        playNote(1046.50, now + 0.3, 0.5, 'sine'); // C6 (hoog en helder)
-        console.log('Synthetisch succes-geluid afgespeeld.');
+        playNote(523.25, now, 0.15);
+        playNote(659.25, now + 0.1, 0.15);
+        playNote(783.99, now + 0.2, 0.15);
+        playNote(1046.50, now + 0.3, 0.5, 'sine');
+        setAudioStatus('Systeem Tada!');
       } catch (e) {
-        console.error('Synthese faalde:', e);
+        setAudioStatus('Audio fout');
       }
     };
 
     const trySimplePlay = (url: string, label: string) => {
       return new Promise<void>((resolve, reject) => {
-        console.log(`Poging (${label}):`, url);
+        setAudioStatus(`Laden: ${label}...`);
         const audio = new Audio(url);
         audio.oncanplaythrough = () => {
-          audio.play().then(resolve).catch(reject);
+          audio.play().then(() => {
+            setAudioStatus(`Gelukt: ${label}`);
+            resolve();
+          }).catch(reject);
         };
-        audio.onerror = () => reject(new Error(`${label} laden mislukt`));
+        audio.onerror = () => reject(new Error(`${label} fout`));
         setTimeout(() => reject(new Error(`${label} timeout`)), 3000);
       });
     };
@@ -140,9 +143,8 @@ export default function App() {
         await trySimplePlay(githubUrl, 'GitHub');
       } catch (e2) {
         try {
-          await trySimplePlay(publicFallbackUrl, 'Pixabay');
+          await trySimplePlay(publicFallbackUrl, 'Reserve');
         } catch (e3) {
-          console.warn('Alle MP3 bronnen faalden, overschakelen naar synthese.');
           playSynthesized();
         }
       }
@@ -693,15 +695,20 @@ export default function App() {
       </main>
 
       <footer className="mt-8 text-center text-stone-400 text-xs space-y-1">
-        <button 
-          onClick={playSuccessSound}
-          className="mb-4 px-3 py-1 bg-stone-100 hover:bg-stone-200 text-stone-500 rounded-full transition-colors flex items-center gap-1 mx-auto"
-        >
-          <span>🔊</span> Test Geluid
-        </button>
+        <div className="flex flex-col items-center gap-2 mb-4">
+          <button 
+            onClick={playSuccessSound}
+            className="px-3 py-1 bg-stone-100 hover:bg-stone-200 text-stone-500 rounded-full transition-colors flex items-center gap-1"
+          >
+            <span>🔊</span> Test Geluid
+          </button>
+          {audioStatus && (
+            <span className="text-[10px] font-mono opacity-60">{audioStatus}</span>
+          )}
+        </div>
         <p>Gemaakt voor kleine kampioenen 🌟</p>
         <p>Deze app is met behulp van AI gemaakt door Glenn Evens.</p>
-        <p className="opacity-50 pt-2">v1.3.0</p>
+        <p className="opacity-50 pt-2">v1.3.2</p>
       </footer>
     </div>
   );
