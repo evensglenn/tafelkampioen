@@ -87,6 +87,7 @@ export default function App() {
 
   const playSuccessSound = useCallback(async () => {
     const githubUrl = 'https://raw.githubusercontent.com/evensglenn/tafelkampioen/main/public/success.mp3';
+    const publicFallbackUrl = 'https://cdn.pixabay.com/audio/2021/08/04/audio_0625c153b0.mp3'; // Betrouwbare Pixabay link
     const baseUrl = import.meta.env.BASE_URL || '/';
     const localUrl = (window.location.origin + baseUrl + '/success.mp3').replace(/([^:]\/)\/+/g, "$1");
 
@@ -96,10 +97,10 @@ export default function App() {
         const context = new AudioContext();
         const now = context.currentTime;
         
-        const playNote = (freq: number, start: number, duration: number) => {
+        const playNote = (freq: number, start: number, duration: number, type: 'sine' | 'square' | 'sawtooth' | 'triangle' = 'triangle') => {
           const osc = context.createOscillator();
           const gain = context.createGain();
-          osc.type = 'triangle';
+          osc.type = type;
           osc.frequency.setValueAtTime(freq, start);
           gain.gain.setValueAtTime(0.1, start);
           gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
@@ -109,38 +110,41 @@ export default function App() {
           osc.stop(start + duration);
         };
 
-        // Vrolijk "Tada!" deuntje
-        playNote(523.25, now, 0.2);      // C5
-        playNote(659.25, now + 0.1, 0.2); // E5
-        playNote(783.99, now + 0.2, 0.4); // G5
-        console.log('Synthetisch succes-geluid afgespeeld als fallback.');
+        // Vrolijker "Tada!" deuntje
+        playNote(523.25, now, 0.15);       // C5
+        playNote(659.25, now + 0.1, 0.15);  // E5
+        playNote(783.99, now + 0.2, 0.15);  // G5
+        playNote(1046.50, now + 0.3, 0.5, 'sine'); // C6 (hoog en helder)
+        console.log('Synthetisch succes-geluid afgespeeld.');
       } catch (e) {
-        console.error('Zelfs synthetisch geluid faalde:', e);
+        console.error('Synthese faalde:', e);
       }
     };
 
-    const trySimplePlay = (url: string) => {
+    const trySimplePlay = (url: string, label: string) => {
       return new Promise<void>((resolve, reject) => {
-        console.log('Poging tot afspelen:', url);
+        console.log(`Poging (${label}):`, url);
         const audio = new Audio(url);
         audio.oncanplaythrough = () => {
           audio.play().then(resolve).catch(reject);
         };
-        audio.onerror = () => reject(new Error('Audio laden mislukt'));
-        // Timeout na 2 seconden
-        setTimeout(() => reject(new Error('Timeout')), 2000);
+        audio.onerror = () => reject(new Error(`${label} laden mislukt`));
+        setTimeout(() => reject(new Error(`${label} timeout`)), 3000);
       });
     };
 
     try {
-      await trySimplePlay(localUrl);
+      await trySimplePlay(localUrl, 'Lokaal');
     } catch (e) {
-      console.warn('Lokaal bestand faalde, proberen via GitHub...');
       try {
-        await trySimplePlay(githubUrl);
+        await trySimplePlay(githubUrl, 'GitHub');
       } catch (e2) {
-        console.warn('Alle MP3 bronnen faalden, overschakelen naar synthetisch geluid.');
-        playSynthesized();
+        try {
+          await trySimplePlay(publicFallbackUrl, 'Pixabay');
+        } catch (e3) {
+          console.warn('Alle MP3 bronnen faalden, overschakelen naar synthese.');
+          playSynthesized();
+        }
       }
     }
   }, []);
@@ -689,9 +693,15 @@ export default function App() {
       </main>
 
       <footer className="mt-8 text-center text-stone-400 text-xs space-y-1">
+        <button 
+          onClick={playSuccessSound}
+          className="mb-4 px-3 py-1 bg-stone-100 hover:bg-stone-200 text-stone-500 rounded-full transition-colors flex items-center gap-1 mx-auto"
+        >
+          <span>🔊</span> Test Geluid
+        </button>
         <p>Gemaakt voor kleine kampioenen 🌟</p>
         <p>Deze app is met behulp van AI gemaakt door Glenn Evens.</p>
-        <p className="opacity-50 pt-2">v1.2.9</p>
+        <p className="opacity-50 pt-2">v1.3.0</p>
       </footer>
     </div>
   );
