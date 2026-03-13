@@ -85,6 +85,27 @@ export default function App() {
     }, 50);
   }, [stopTimer]);
 
+  const playSuccessSound = useCallback(() => {
+    const baseUrl = import.meta.env.BASE_URL || '/';
+    const paths = [
+      (baseUrl + '/success.mp3').replace(/\/+/g, '/'),
+      'success.mp3',
+      './success.mp3',
+      'https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3'
+    ];
+    
+    const tryPlay = (index: number) => {
+      if (index >= paths.length) return;
+      const audio = new Audio(paths[index]);
+      audio.play().catch(err => {
+        console.warn(`Audio path ${paths[index]} failed, trying next...`, err);
+        tryPlay(index + 1);
+      });
+    };
+    
+    tryPlay(0);
+  }, []);
+
   const handleAnswer = useCallback((answer: string | null) => {
     if (!currentExercise || feedback) return;
 
@@ -130,9 +151,7 @@ export default function App() {
         
         // Play success sound if 0 errors
         if (nextStats.correct === nextStats.total) {
-          const audioUrl = new URL('success.mp3', window.location.origin + import.meta.env.BASE_URL).href;
-          const audio = new Audio(audioUrl);
-          audio.play().catch(e => console.error('Audio play failed:', e));
+          playSuccessSound();
           
           confetti({
             particleCount: 150,
