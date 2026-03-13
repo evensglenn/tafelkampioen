@@ -87,63 +87,60 @@ export default function App() {
 
   const playSuccessSound = useCallback(async () => {
     const githubUrl = 'https://raw.githubusercontent.com/evensglenn/tafelkampioen/main/public/success.mp3';
-    
-    const getLocalUrl = () => {
-      const baseUrl = import.meta.env.BASE_URL || '/';
-      const path = (baseUrl + '/success.mp3').replace(/\/+/g, '/');
-      return new URL(path, window.location.origin).href;
+    const baseUrl = import.meta.env.BASE_URL || '/';
+    const localUrl = (window.location.origin + baseUrl + '/success.mp3').replace(/([^:]\/)\/+/g, "$1");
+
+    const playSynthesized = () => {
+      try {
+        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+        const context = new AudioContext();
+        const now = context.currentTime;
+        
+        const playNote = (freq: number, start: number, duration: number) => {
+          const osc = context.createOscillator();
+          const gain = context.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, start);
+          gain.gain.setValueAtTime(0.1, start);
+          gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+          osc.connect(gain);
+          gain.connect(context.destination);
+          osc.start(start);
+          osc.stop(start + duration);
+        };
+
+        // Vrolijk "Tada!" deuntje
+        playNote(523.25, now, 0.2);      // C5
+        playNote(659.25, now + 0.1, 0.2); // E5
+        playNote(783.99, now + 0.2, 0.4); // G5
+        console.log('Synthetisch succes-geluid afgespeeld als fallback.');
+      } catch (e) {
+        console.error('Zelfs synthetisch geluid faalde:', e);
+      }
     };
 
-    const loadAndPlay = async (url: string) => {
-      const cacheBuster = `?t=${Date.now()}`;
-      const finalUrl = url + cacheBuster;
-      console.log('Poging tot laden:', finalUrl);
-      
-      const response = await fetch(finalUrl);
-      if (!response.ok) throw new Error(`Server fout: ${response.status}`);
-      
-      const arrayBuffer = await response.arrayBuffer();
-      
-      // DEBUG: Log de eerste 50 bytes om te zien wat voor bestand het echt is
-      const header = new Uint8Array(arrayBuffer.slice(0, 50));
-      const headerText = new TextDecoder().decode(header);
-      console.log('Bestand header (eerste 50 bytes):', headerText);
-      
-      if (headerText.includes('version https://git-lfs')) {
-        throw new Error('Dit is een Git LFS pointer bestand, geen echt MP3 bestand. Upload het echte bestand naar GitHub.');
-      }
-
-      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-      const context = new AudioContext();
-      
-      try {
-        const audioBuffer = await context.decodeAudioData(arrayBuffer);
-        const source = context.createBufferSource();
-        source.buffer = audioBuffer;
-        source.connect(context.destination);
-        source.start(0);
-        console.log('Audio succesvol gestart via BufferSource!');
-      } catch (decodeError) {
-        console.warn('Buffer decoding mislukt, probeer standaard Audio element...', decodeError);
-        // Fallback naar standaard Audio element met Blob
-        const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
-        const blobUrl = URL.createObjectURL(blob);
-        const audio = new Audio(blobUrl);
-        await audio.play();
-        console.log('Audio succesvol gestart via Blob URL!');
-      }
+    const trySimplePlay = (url: string) => {
+      return new Promise<void>((resolve, reject) => {
+        console.log('Poging tot afspelen:', url);
+        const audio = new Audio(url);
+        audio.oncanplaythrough = () => {
+          audio.play().then(resolve).catch(reject);
+        };
+        audio.onerror = () => reject(new Error('Audio laden mislukt'));
+        // Timeout na 2 seconden
+        setTimeout(() => reject(new Error('Timeout')), 2000);
+      });
     };
 
     try {
-      await loadAndPlay(getLocalUrl());
+      await trySimplePlay(localUrl);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      console.warn('Lokaal mislukt:', msg);
+      console.warn('Lokaal bestand faalde, proberen via GitHub...');
       try {
-        await loadAndPlay(githubUrl);
+        await trySimplePlay(githubUrl);
       } catch (e2) {
-        const msg2 = e2 instanceof Error ? e2.message : String(e2);
-        console.error('Alle audio-pogingen mislukt:', msg2);
+        console.warn('Alle MP3 bronnen faalden, overschakelen naar synthetisch geluid.');
+        playSynthesized();
       }
     }
   }, []);
@@ -694,7 +691,7 @@ export default function App() {
       <footer className="mt-8 text-center text-stone-400 text-xs space-y-1">
         <p>Gemaakt voor kleine kampioenen 🌟</p>
         <p>Deze app is met behulp van AI gemaakt door Glenn Evens.</p>
-        <p className="opacity-50 pt-2">v1.2.8</p>
+        <p className="opacity-50 pt-2">v1.2.9</p>
       </footer>
     </div>
   );
