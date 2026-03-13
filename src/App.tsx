@@ -86,34 +86,34 @@ export default function App() {
   }, [stopTimer]);
 
   const playSuccessSound = useCallback(async () => {
+    const githubUrl = 'https://github.com/evensglenn/tafelkampioen/raw/refs/heads/main/public/success.mp3';
+    const baseUrl = import.meta.env.BASE_URL || '/';
+    const localUrl = (baseUrl + '/success.mp3').replace(/\/+/g, '/');
+    
+    const tryPlay = (url: string) => {
+      return new Promise<void>((resolve, reject) => {
+        console.log('Attempting to play:', url);
+        const audio = new Audio(url);
+        audio.play()
+          .then(() => {
+            console.log('Successfully playing:', url);
+            resolve();
+          })
+          .catch(err => {
+            console.warn('Failed to play:', url, err);
+            reject(err);
+          });
+      });
+    };
+
     try {
-      // Construct the absolute URL correctly
-      const baseUrl = import.meta.env.BASE_URL || '/';
-      const audioPath = (baseUrl + '/success.mp3').replace(/\/+/g, '/');
-      const fullUrl = new URL(audioPath, window.location.origin).href;
-      
-      console.log('Attempting to load audio from:', fullUrl);
-      
-      // Fetch the audio file as a blob to ensure it exists and is accessible
-      const response = await fetch(fullUrl);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      
-      const audio = new Audio(blobUrl);
-      await audio.play();
-      
-      // Cleanup the blob URL after playing
-      audio.onended = () => URL.revokeObjectURL(blobUrl);
+      await tryPlay(githubUrl);
     } catch (e) {
-      console.error('Audio playback failed with fetch method:', e);
-      
-      // Fallback to a simpler method if fetch fails
-      const baseUrl = import.meta.env.BASE_URL || '/';
-      const audioPath = (baseUrl + '/success.mp3').replace(/\/+/g, '/');
-      const audio = new Audio(audioPath);
-      audio.play().catch(err => console.error('Simple fallback also failed:', err));
+      try {
+        await tryPlay(localUrl);
+      } catch (e2) {
+        console.error('All audio sources failed.');
+      }
     }
   }, []);
 
@@ -663,7 +663,7 @@ export default function App() {
       <footer className="mt-8 text-center text-stone-400 text-xs space-y-1">
         <p>Gemaakt voor kleine kampioenen 🌟</p>
         <p>Deze app is met behulp van AI gemaakt door Glenn Evens.</p>
-        <p className="opacity-50 pt-2">v1.2.3</p>
+        <p className="opacity-50 pt-2">v1.2.4</p>
       </footer>
     </div>
   );
