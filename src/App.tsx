@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import confetti from 'canvas-confetti';
 import { 
   Settings, 
   Play, 
@@ -35,7 +36,18 @@ export default function App() {
   });
   const [sessionHistory, setSessionHistory] = useState<SessionResult[]>(() => {
     const saved = localStorage.getItem('tafel-session-history');
-    return saved ? JSON.parse(saved) : [];
+    if (!saved) return [];
+    try {
+      const parsed = JSON.parse(saved);
+      // Migrate old data if necessary
+      return parsed.map((item: any) => ({
+        ...item,
+        multiplicationTables: item.multiplicationTables || [],
+        divisionTables: item.divisionTables || []
+      }));
+    } catch (e) {
+      return [];
+    }
   });
   
   const [currentExercise, setCurrentExercise] = useState<Exercise | null>(null);
@@ -111,8 +123,24 @@ export default function App() {
           correct: nextStats.correct,
           total: nextStats.total,
           timestamp: Date.now(),
+          multiplicationTables: [...settings.multiplicationTables],
+          divisionTables: [...settings.divisionTables],
         };
         setSessionHistory(prev => [result, ...prev].slice(0, 5)); // Keep last 5
+        
+        // Play success sound if 0 errors
+        if (nextStats.correct === nextStats.total) {
+          const audio = new Audio(`${import.meta.env.BASE_URL}success.mp3`);
+          audio.play().catch(e => console.error('Audio play failed:', e));
+          
+          confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#10b981', '#3b82f6', '#f59e0b']
+          });
+        }
+
         setMode('results');
       } else {
         setExercisePool(prev => prev.slice(1));
@@ -387,12 +415,23 @@ export default function App() {
                     {sessionHistory.map((result) => (
                       <div 
                         key={result.id}
-                        className="flex items-center justify-between py-2 px-4 bg-white/50 rounded-xl border border-stone-100"
+                        className="flex flex-col py-3 px-4 bg-white/50 rounded-xl border border-stone-100 space-y-1"
                       >
-                        <span className="font-bold text-stone-700">{result.playerName}</span>
-                        <span className="font-mono font-bold text-emerald-600">
-                          {result.correct} / {result.total}
-                        </span>
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-stone-700">{result.playerName}</span>
+                          <span className="font-mono font-bold text-emerald-600">
+                            {result.correct} / {result.total}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-stone-400 flex flex-wrap gap-1">
+                          {(result.multiplicationTables?.length ?? 0) > 0 && (
+                            <span>×: {result.multiplicationTables.join(', ')}</span>
+                          )}
+                          {(result.multiplicationTables?.length ?? 0) > 0 && (result.divisionTables?.length ?? 0) > 0 && <span>|</span>}
+                          {(result.divisionTables?.length ?? 0) > 0 && (
+                            <span>÷: {result.divisionTables.join(', ')}</span>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>

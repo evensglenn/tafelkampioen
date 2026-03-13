@@ -22,6 +22,8 @@ export interface SessionResult {
   correct: number;
   total: number;
   timestamp: number;
+  multiplicationTables: number[];
+  divisionTables: number[];
 }
 
 export interface MasteryData {
