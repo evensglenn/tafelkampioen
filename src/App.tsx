@@ -86,47 +86,35 @@ export default function App() {
   }, [stopTimer]);
 
   const playSuccessSound = useCallback(async () => {
-    // De "echte" raw URL van GitHub (zonder redirects)
-    const githubRawUrl = 'https://raw.githubusercontent.com/evensglenn/tafelkampioen/main/public/success.mp3';
+    const githubUrl = 'https://raw.githubusercontent.com/evensglenn/tafelkampioen/main/public/success.mp3';
     const baseUrl = import.meta.env.BASE_URL || '/';
     const localUrl = (baseUrl + '/success.mp3').replace(/\/+/g, '/');
     
-    const tryPlay = (url: string) => {
-      return new Promise<void>((resolve, reject) => {
-        console.log('Proberen af te spelen:', url);
-        const audio = new Audio();
-        
-        // Belangrijk voor cross-origin bestanden
-        audio.crossOrigin = "anonymous";
-        
-        audio.src = url;
-        
-        audio.play()
-          .then(() => {
-            console.log('Succesvol afgespeeld:', url);
-            resolve();
-          })
-          .catch(err => {
-            console.warn('Fout bij afspelen:', url, err.name, err.message);
-            reject(err);
-          });
-      });
+    const loadAndPlay = async (url: string) => {
+      console.log('Laden van audio via buffer:', url);
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Fetch mislukt: ${response.status}`);
+      
+      const arrayBuffer = await response.arrayBuffer();
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      const context = new AudioContext();
+      
+      const audioBuffer = await context.decodeAudioData(arrayBuffer);
+      const source = context.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(context.destination);
+      source.start(0);
+      console.log('Audio buffer succesvol gestart');
     };
 
     try {
-      // Eerst de directe raw link proberen
-      await tryPlay(githubRawUrl);
+      await loadAndPlay(localUrl);
     } catch (e) {
+      console.warn('Lokale buffer mislukt, proberen via GitHub...', e);
       try {
-        // Dan de lokale link
-        await tryPlay(localUrl);
+        await loadAndPlay(githubUrl);
       } catch (e2) {
-        // Als laatste redmiddel: de link die je eerder gaf (met redirects)
-        try {
-          await tryPlay('https://github.com/evensglenn/tafelkampioen/raw/refs/heads/main/public/success.mp3');
-        } catch (e3) {
-          console.error('Alle audiobronnen zijn mislukt.');
-        }
+        console.error('Alle audio-methoden zijn mislukt:', e2);
       }
     }
   }, []);
@@ -677,7 +665,7 @@ export default function App() {
       <footer className="mt-8 text-center text-stone-400 text-xs space-y-1">
         <p>Gemaakt voor kleine kampioenen 🌟</p>
         <p>Deze app is met behulp van AI gemaakt door Glenn Evens.</p>
-        <p className="opacity-50 pt-2">v1.2.5</p>
+        <p className="opacity-50 pt-2">v1.2.6</p>
       </footer>
     </div>
   );
