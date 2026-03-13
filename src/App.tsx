@@ -85,69 +85,15 @@ export default function App() {
     }, 50);
   }, [stopTimer]);
 
-  const [audioStatus, setAudioStatus] = useState<string>('');
-
   const playSuccessSound = useCallback(async () => {
-    const t = Date.now();
-    const githubUrl = `https://raw.githubusercontent.com/evensglenn/tafelkampioen/main/public/success.mp3?v=${t}`;
-    const publicFallbackUrl = `https://www.soundjay.com/buttons/sounds/button-10.mp3?v=${t}`;
     const baseUrl = import.meta.env.BASE_URL || '/';
-    const localUrl = (window.location.origin + baseUrl + `/success.mp3?v=${t}`).replace(/([^:]\/)\/+/g, "$1");
-
-    const playSynthesized = () => {
-      try {
-        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-        const context = new AudioContext();
-        const now = context.currentTime;
-        const playNote = (freq: number, start: number, duration: number, type: 'sine' | 'square' | 'sawtooth' | 'triangle' = 'triangle') => {
-          const osc = context.createOscillator();
-          const gain = context.createGain();
-          osc.type = type;
-          osc.frequency.setValueAtTime(freq, start);
-          gain.gain.setValueAtTime(0.1, start);
-          gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-          osc.connect(gain);
-          gain.connect(context.destination);
-          osc.start(start);
-          osc.stop(start + duration);
-        };
-        playNote(523.25, now, 0.15);
-        playNote(659.25, now + 0.1, 0.15);
-        playNote(783.99, now + 0.2, 0.15);
-        playNote(1046.50, now + 0.3, 0.5, 'sine');
-        setAudioStatus('Systeem Tada!');
-      } catch (e) {
-        setAudioStatus('Audio fout');
-      }
-    };
-
-    const trySimplePlay = (url: string, label: string) => {
-      return new Promise<void>((resolve, reject) => {
-        setAudioStatus(`Laden: ${label}...`);
-        const audio = new Audio(url);
-        audio.oncanplaythrough = () => {
-          audio.play().then(() => {
-            setAudioStatus(`Gelukt: ${label}`);
-            resolve();
-          }).catch(reject);
-        };
-        audio.onerror = () => reject(new Error(`${label} fout`));
-        setTimeout(() => reject(new Error(`${label} timeout`)), 3000);
-      });
-    };
-
+    const localUrl = (window.location.origin + baseUrl + `/success.mp3`).replace(/([^:]\/)\/+/g, "$1");
+    
     try {
-      await trySimplePlay(localUrl, 'Lokaal');
+      const audio = new Audio(localUrl);
+      await audio.play();
     } catch (e) {
-      try {
-        await trySimplePlay(githubUrl, 'GitHub');
-      } catch (e2) {
-        try {
-          await trySimplePlay(publicFallbackUrl, 'Reserve');
-        } catch (e3) {
-          playSynthesized();
-        }
-      }
+      console.warn('Audio afspelen mislukt:', e);
     }
   }, []);
 
@@ -695,20 +641,9 @@ export default function App() {
       </main>
 
       <footer className="mt-8 text-center text-stone-400 text-xs space-y-1">
-        <div className="flex flex-col items-center gap-2 mb-4">
-          <button 
-            onClick={playSuccessSound}
-            className="px-3 py-1 bg-stone-100 hover:bg-stone-200 text-stone-500 rounded-full transition-colors flex items-center gap-1"
-          >
-            <span>🔊</span> Test Geluid
-          </button>
-          {audioStatus && (
-            <span className="text-[10px] font-mono opacity-60">{audioStatus}</span>
-          )}
-        </div>
         <p>Gemaakt voor kleine kampioenen 🌟</p>
         <p>Deze app is met behulp van AI gemaakt door Glenn Evens.</p>
-        <p className="opacity-50 pt-2">v1.3.2</p>
+        <p className="opacity-50 pt-2">v1.4.0</p>
       </footer>
     </div>
   );
