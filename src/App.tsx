@@ -88,7 +88,6 @@ export default function App() {
   const playSuccessSound = useCallback(async () => {
     const githubUrl = 'https://raw.githubusercontent.com/evensglenn/tafelkampioen/main/public/success.mp3';
     
-    // Bepaal het absolute pad naar het lokale bestand
     const getLocalUrl = () => {
       const baseUrl = import.meta.env.BASE_URL || '/';
       const path = (baseUrl + '/success.mp3').replace(/\/+/g, '/');
@@ -96,42 +95,55 @@ export default function App() {
     };
 
     const loadAndPlay = async (url: string) => {
-      console.log('Poging tot laden:', url);
-      const response = await fetch(url);
+      const cacheBuster = `?t=${Date.now()}`;
+      const finalUrl = url + cacheBuster;
+      console.log('Poging tot laden:', finalUrl);
       
+      const response = await fetch(finalUrl);
       if (!response.ok) throw new Error(`Server fout: ${response.status}`);
       
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('text/html')) {
-        throw new Error('Ontvangen data is HTML (waarschijnlijk een 404 pagina), geen audio.');
-      }
-
       const arrayBuffer = await response.arrayBuffer();
-      if (arrayBuffer.byteLength < 1000) {
-        throw new Error('Bestand is te klein om audio te zijn (corrupt of 404).');
+      
+      // DEBUG: Log de eerste 50 bytes om te zien wat voor bestand het echt is
+      const header = new Uint8Array(arrayBuffer.slice(0, 50));
+      const headerText = new TextDecoder().decode(header);
+      console.log('Bestand header (eerste 50 bytes):', headerText);
+      
+      if (headerText.includes('version https://git-lfs')) {
+        throw new Error('Dit is een Git LFS pointer bestand, geen echt MP3 bestand. Upload het echte bestand naar GitHub.');
       }
 
       const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
       const context = new AudioContext();
       
-      const audioBuffer = await context.decodeAudioData(arrayBuffer);
-      const source = context.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(context.destination);
-      source.start(0);
-      console.log('Audio succesvol gestart!');
+      try {
+        const audioBuffer = await context.decodeAudioData(arrayBuffer);
+        const source = context.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(context.destination);
+        source.start(0);
+        console.log('Audio succesvol gestart via BufferSource!');
+      } catch (decodeError) {
+        console.warn('Buffer decoding mislukt, probeer standaard Audio element...', decodeError);
+        // Fallback naar standaard Audio element met Blob
+        const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
+        const blobUrl = URL.createObjectURL(blob);
+        const audio = new Audio(blobUrl);
+        await audio.play();
+        console.log('Audio succesvol gestart via Blob URL!');
+      }
     };
 
     try {
-      // Probeer eerst lokaal
       await loadAndPlay(getLocalUrl());
     } catch (e) {
-      console.warn('Lokaal mislukt, proberen via GitHub...', e instanceof Error ? e.message : e);
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn('Lokaal mislukt:', msg);
       try {
-        // Dan via GitHub
         await loadAndPlay(githubUrl);
       } catch (e2) {
-        console.error('Alle audio-pogingen mislukt:', e2 instanceof Error ? e2.message : e2);
+        const msg2 = e2 instanceof Error ? e2.message : String(e2);
+        console.error('Alle audio-pogingen mislukt:', msg2);
       }
     }
   }, []);
@@ -682,7 +694,7 @@ export default function App() {
       <footer className="mt-8 text-center text-stone-400 text-xs space-y-1">
         <p>Gemaakt voor kleine kampioenen 🌟</p>
         <p>Deze app is met behulp van AI gemaakt door Glenn Evens.</p>
-        <p className="opacity-50 pt-2">v1.2.7</p>
+        <p className="opacity-50 pt-2">v1.2.8</p>
       </footer>
     </div>
   );
