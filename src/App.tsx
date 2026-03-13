@@ -85,25 +85,36 @@ export default function App() {
     }, 50);
   }, [stopTimer]);
 
-  const playSuccessSound = useCallback(() => {
-    const baseUrl = import.meta.env.BASE_URL || '/';
-    const paths = [
-      (baseUrl + '/success.mp3').replace(/\/+/g, '/'),
-      'success.mp3',
-      './success.mp3',
-      'https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3'
-    ];
-    
-    const tryPlay = (index: number) => {
-      if (index >= paths.length) return;
-      const audio = new Audio(paths[index]);
-      audio.play().catch(err => {
-        console.warn(`Audio path ${paths[index]} failed, trying next...`, err);
-        tryPlay(index + 1);
-      });
-    };
-    
-    tryPlay(0);
+  const playSuccessSound = useCallback(async () => {
+    try {
+      // Construct the absolute URL correctly
+      const baseUrl = import.meta.env.BASE_URL || '/';
+      const audioPath = (baseUrl + '/success.mp3').replace(/\/+/g, '/');
+      const fullUrl = new URL(audioPath, window.location.origin).href;
+      
+      console.log('Attempting to load audio from:', fullUrl);
+      
+      // Fetch the audio file as a blob to ensure it exists and is accessible
+      const response = await fetch(fullUrl);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      
+      const audio = new Audio(blobUrl);
+      await audio.play();
+      
+      // Cleanup the blob URL after playing
+      audio.onended = () => URL.revokeObjectURL(blobUrl);
+    } catch (e) {
+      console.error('Audio playback failed with fetch method:', e);
+      
+      // Fallback to a simpler method if fetch fails
+      const baseUrl = import.meta.env.BASE_URL || '/';
+      const audioPath = (baseUrl + '/success.mp3').replace(/\/+/g, '/');
+      const audio = new Audio(audioPath);
+      audio.play().catch(err => console.error('Simple fallback also failed:', err));
+    }
   }, []);
 
   const handleAnswer = useCallback((answer: string | null) => {
@@ -652,6 +663,7 @@ export default function App() {
       <footer className="mt-8 text-center text-stone-400 text-xs space-y-1">
         <p>Gemaakt voor kleine kampioenen 🌟</p>
         <p>Deze app is met behulp van AI gemaakt door Glenn Evens.</p>
+        <p className="opacity-50 pt-2">v1.2.3</p>
       </footer>
     </div>
   );
