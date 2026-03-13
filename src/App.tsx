@@ -130,7 +130,8 @@ export default function App() {
         
         // Play success sound if 0 errors
         if (nextStats.correct === nextStats.total) {
-          const audio = new Audio(`${import.meta.env.BASE_URL}success.mp3`);
+          const audioUrl = new URL('success.mp3', window.location.origin + import.meta.env.BASE_URL).href;
+          const audio = new Audio(audioUrl);
           audio.play().catch(e => console.error('Audio play failed:', e));
           
           confetti({
