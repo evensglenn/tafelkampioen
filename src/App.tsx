@@ -453,7 +453,7 @@ export default function App() {
                 `}
               >
                 <Play className={`w-6 h-6 transition-transform ${totalPossible > 0 ? 'group-hover:translate-x-1' : ''}`} />
-                Start Oefenen!
+                Start met oefenen!
               </button>
 
               {sessionHistory.length > 0 && (
@@ -546,7 +546,7 @@ export default function App() {
                     <ChevronLeft className="w-6 h-6" />
                   </button>
                   <span className="font-bold text-stone-400">
-                    Vraag {stats.total + 1} van {activeTotal}
+                    Vraag {feedback ? stats.total : stats.total + 1} van {activeTotal}
                   </span>
                   <div className="w-10" />
                 </div>
@@ -778,7 +778,7 @@ export default function App() {
       <footer className="mt-8 text-center text-stone-400 text-xs space-y-1">
         <p>Gemaakt voor kleine kampioenen 🌟</p>
         <p>Deze app is met behulp van AI gemaakt door Glenn Evens.</p>
-        <p className="opacity-50 pt-2">v1.9.0</p>
+        <p className="opacity-50 pt-2">v1.9.1</p>
       </footer>
     </div>
   );
