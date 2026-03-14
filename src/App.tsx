@@ -22,7 +22,8 @@ import {
   Mic,
   MicOff,
   X,
-  Info
+  Info,
+  Trash2
 } from 'lucide-react';
 import { Exercise, Operation, UserSettings, MasteryData, SessionResult } from './types';
 
@@ -340,6 +341,19 @@ export default function App() {
     }
   }, [totalPossible, settings.exerciseCount]);
 
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+
+  const clearHistory = () => {
+    if (showClearConfirm) {
+      setSessionHistory([]);
+      setShowClearConfirm(false);
+    } else {
+      setShowClearConfirm(true);
+      // Reset after 3 seconds if not clicked
+      setTimeout(() => setShowClearConfirm(false), 3000);
+    }
+  };
+
   const toggleTable = (num: number, op: Operation) => {
     setSettings(prev => {
       const key = op === 'multiplication' ? 'multiplicationTables' : 'divisionTables';
@@ -576,9 +590,23 @@ export default function App() {
 
               {sessionHistory.length > 0 && (
                 <div className="glass rounded-3xl p-6 space-y-4">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-stone-400 flex items-center gap-2">
-                    <History className="w-4 h-4" /> Laatste resultaten
-                  </h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-stone-400 flex items-center gap-2">
+                      <History className="w-4 h-4" /> Laatste resultaten
+                    </h3>
+                    <button 
+                      onClick={clearHistory}
+                      className={`
+                        flex items-center gap-1 px-2 py-1 rounded-lg transition-all text-xs font-bold
+                        ${showClearConfirm 
+                          ? 'bg-red-100 text-red-600' 
+                          : 'text-stone-300 hover:text-red-400'}
+                      `}
+                      title="Historiek wissen"
+                    >
+                      {showClearConfirm ? 'Zeker?' : <Trash2 className="w-4 h-4" />}
+                    </button>
+                  </div>
                   <div className="space-y-2">
                     {sessionHistory.map((result) => (
                       <button 
@@ -903,7 +931,7 @@ export default function App() {
       <footer className="mt-8 text-center text-stone-400 text-xs space-y-1">
         <p>Gemaakt voor kleine kampioenen 🌟</p>
         <p>Deze app is met behulp van AI gemaakt door Glenn Evens.</p>
-        <p className="opacity-50 pt-2">v1.5.0</p>
+        <p className="opacity-50 pt-2">v1.6.0</p>
       </footer>
     </div>
   );
