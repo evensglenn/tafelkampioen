@@ -18,7 +18,11 @@ import {
   Divide,
   Sparkles,
   User,
-  History
+  History,
+  Mic,
+  MicOff,
+  X,
+  Info
 } from 'lucide-react';
 import { Exercise, Operation, UserSettings, MasteryData, SessionResult } from './types';
 
@@ -28,7 +32,7 @@ export default function App() {
   const [mode, setMode] = useState<'settings' | 'practice' | 'results'>('settings');
   const [settings, setSettings] = useState<UserSettings>(() => {
     const saved = localStorage.getItem('tafel-settings');
-    return saved ? JSON.parse(saved) : { playerName: '', multiplicationTables: [], divisionTables: [], exerciseCount: 10 };
+    return saved ? JSON.parse(saved) : { playerName: '', multiplicationTables: [], divisionTables: [], exerciseCount: 10, voiceInputEnabled: false };
   });
   const [mastery, setMastery] = useState<MasteryData>(() => {
     const saved = localStorage.getItem('tafel-mastery');
@@ -58,8 +62,12 @@ export default function App() {
   const [history, setHistory] = useState<{ exercise: Exercise; correct: boolean }[]>([]);
   const [activeTotal, setActiveTotal] = useState(0);
   const [timeLeft, setTimeLeft] = useState(15);
+  const [selectedSession, setSelectedSession] = useState<SessionResult | null>(null);
+  const [isListening, setIsListening] = useState(false);
+  const [micError, setMicError] = useState<string | null>(null);
   
   const inputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const handleAnswerRef = useRef<(answer: string | null) => void>(() => {});
 
@@ -96,6 +104,112 @@ export default function App() {
       console.warn('Audio afspelen mislukt:', e);
     }
   }, []);
+
+  // Speech Recognition Setup
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'nl-NL';
+
+    recognition.onresult = (event: any) => {
+      let finalTranscript = '';
+      let interimTranscript = '';
+
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
+
+      const transcript = (finalTranscript || interimTranscript).toLowerCase();
+      
+      const numberMap: { [key: string]: string } = {
+        'nul': '0', 'één': '1', 'een': '1', 'twee': '2', 'drie': '3', 'vier': '4', 
+        'vijf': '5', 'zes': '6', 'zeven': '7', 'acht': '8', 'negen': '9', 'tien': '10',
+        'elf': '11', 'twaalf': '12', 'dertien': '13', 'veertien': '14', 'vijftien': '15',
+        'zestien': '16', 'zeventien': '17', 'achttien': '18', 'negentien': '19', 'twintig': '20',
+        'dertig': '30', 'veertig': '40', 'vijftig': '50', 'zestig': '60', 'zeventig': '70',
+        'tachtig': '80', 'negentig': '90', 'honderd': '100'
+      };
+
+      let detectedNumber = transcript.replace(/[^0-9]/g, '');
+      
+      if (!detectedNumber) {
+        const words = transcript.split(' ');
+        for (const word of words) {
+          if (numberMap[word]) {
+            detectedNumber = numberMap[word];
+            break;
+          }
+        }
+      }
+
+      if (detectedNumber) {
+        setUserAnswer(detectedNumber);
+        if (finalTranscript) {
+          handleAnswerRef.current(detectedNumber);
+        }
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      if (event.error === 'aborted' || event.error === 'no-speech') return;
+      console.error('Speech recognition error', event.error);
+      setIsListening(false);
+      if (event.error === 'not-allowed') {
+        setMicError('Microfoon toegang geweigerd. Controleer je browser instellingen.');
+      } else {
+        setMicError(`Fout bij spraakherkenning: ${event.error}`);
+      }
+    };
+
+    recognition.onstart = () => setMicError(null);
+
+    recognition.onend = () => {
+      if (isListening) {
+        try {
+          recognition.start();
+        } catch (e) {
+          // Ignore if already started
+        }
+      }
+    };
+
+    recognitionRef.current = recognition;
+
+    if (isListening) {
+      try {
+        recognition.start();
+      } catch (e) {
+        console.warn('Recognition start failed', e);
+      }
+    }
+
+    return () => {
+      try {
+        recognition.stop();
+      } catch (e) {}
+      recognitionRef.current = null;
+    };
+  }, [isListening]);
+
+  const toggleListening = () => {
+    setIsListening(prev => !prev);
+  };
+
+  // Stop listening when leaving practice
+  useEffect(() => {
+    if (mode !== 'practice' && isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+    }
+  }, [mode, isListening]);
 
   const handleAnswer = useCallback((answer: string | null) => {
     if (!currentExercise || feedback) return;
@@ -137,6 +251,7 @@ export default function App() {
           timestamp: Date.now(),
           multiplicationTables: [...settings.multiplicationTables],
           divisionTables: [...settings.divisionTables],
+          history: [...history, { exercise: currentExercise, correct: isCorrect }]
         };
         setSessionHistory(prev => [result, ...prev].slice(0, 5)); // Keep last 5
         
@@ -160,8 +275,8 @@ export default function App() {
         setFeedback(null);
         startTimer();
       }
-    }, 1000);
-  }, [currentExercise, feedback, stats, activeTotal, startTimer, stopTimer, settings.multiplicationTables, settings.playerName]);
+    }, 500);
+  }, [currentExercise, feedback, stats, activeTotal, startTimer, stopTimer, settings.multiplicationTables, settings.playerName, history, playSuccessSound]);
 
   useEffect(() => {
     handleAnswerRef.current = handleAnswer;
@@ -216,6 +331,14 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('tafel-session-history', JSON.stringify(sessionHistory));
   }, [sessionHistory]);
+
+  const totalPossible = (settings.multiplicationTables.length * 11) + (settings.divisionTables.length * 11);
+
+  useEffect(() => {
+    if (settings.exerciseCount !== 'all' && settings.exerciseCount > totalPossible && totalPossible > 0) {
+      setSettings(prev => ({ ...prev, exerciseCount: 10 }));
+    }
+  }, [totalPossible, settings.exerciseCount]);
 
   const toggleTable = (num: number, op: Operation) => {
     setSettings(prev => {
@@ -386,36 +509,70 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="pt-6 border-t border-stone-100">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-stone-400 mb-4 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4" /> Aantal sommen
-                  </h3>
-                  <div className="grid grid-cols-4 gap-2">
-                    {([10, 20, 50, 'all'] as const).map(count => (
-                      <button
-                        key={`count-${count}`}
-                        onClick={() => setSettings(prev => ({ ...prev, exerciseCount: count }))}
-                        className={`
-                          h-12 rounded-xl font-bold transition-all duration-200
-                          ${settings.exerciseCount === count
-                            ? 'bg-purple-500 text-white shadow-lg shadow-purple-200 scale-105'
-                            : 'bg-stone-100 text-stone-400 hover:bg-stone-200'}
-                        `}
-                      >
-                        {count === 'all' ? 'Alle' : count}
-                      </button>
-                    ))}
+                <div className="pt-6 border-t border-stone-100 space-y-6">
+                  <div>
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-stone-400 mb-4 flex items-center gap-2">
+                      <Mic className="w-4 h-4" /> Spraakherkenning
+                    </h3>
+                    <button
+                      onClick={() => setSettings(prev => ({ ...prev, voiceInputEnabled: !prev.voiceInputEnabled }))}
+                      className={`
+                        w-full py-3 rounded-xl font-bold transition-all duration-200 flex items-center justify-center gap-2
+                        ${settings.voiceInputEnabled
+                          ? 'bg-purple-100 text-purple-600 border-2 border-purple-200'
+                          : 'bg-stone-100 text-stone-400 border-2 border-transparent'}
+                      `}
+                    >
+                      {settings.voiceInputEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+                      {settings.voiceInputEnabled ? 'Ingeschakeld' : 'Uitgeschakeld'}
+                    </button>
+                    <p className="text-[10px] text-stone-400 mt-2 text-center italic">
+                      Zeg het getal hardop om te antwoorden (alleen Chrome/Edge)
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-stone-400 mb-4 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4" /> Aantal sommen
+                    </h3>
+                    <div className="grid grid-cols-4 gap-2">
+                      {([10, 20, 50, 'all'] as const).map(count => {
+                        const isDisabled = count !== 'all' && count > totalPossible;
+                        return (
+                          <button
+                            key={`count-${count}`}
+                            disabled={isDisabled}
+                            onClick={() => setSettings(prev => ({ ...prev, exerciseCount: count }))}
+                            className={`
+                              h-12 rounded-xl font-bold transition-all duration-200
+                              ${isDisabled ? 'opacity-20 cursor-not-allowed grayscale' : ''}
+                              ${settings.exerciseCount === count
+                                ? 'bg-purple-500 text-white shadow-lg shadow-purple-200 scale-105'
+                                : 'bg-stone-100 text-stone-400 hover:bg-stone-200'}
+                            `}
+                          >
+                            {count === 'all' ? 'Alle' : count}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
-
-                <button
-                  onClick={startPractice}
-                  className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold text-xl shadow-xl shadow-emerald-100 hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 group"
-                >
-                  <Play className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
-                  Start Oefenen!
-                </button>
               </div>
+
+              <button
+                onClick={startPractice}
+                disabled={totalPossible === 0}
+                className={`
+                  w-full py-4 text-white rounded-2xl font-bold text-xl shadow-xl transition-all flex items-center justify-center gap-2 group
+                  ${totalPossible === 0 
+                    ? 'bg-stone-300 cursor-not-allowed shadow-none' 
+                    : 'bg-emerald-600 shadow-emerald-100 hover:bg-emerald-700'}
+                `}
+              >
+                <Play className={`w-6 h-6 transition-transform ${totalPossible > 0 ? 'group-hover:translate-x-1' : ''}`} />
+                Start Oefenen!
+              </button>
 
               {sessionHistory.length > 0 && (
                 <div className="glass rounded-3xl p-6 space-y-4">
@@ -424,15 +581,19 @@ export default function App() {
                   </h3>
                   <div className="space-y-2">
                     {sessionHistory.map((result) => (
-                      <div 
+                      <button 
                         key={result.id}
-                        className="flex flex-col py-3 px-4 bg-white/50 rounded-xl border border-stone-100 space-y-1"
+                        onClick={() => setSelectedSession(result)}
+                        className="w-full flex flex-col py-3 px-4 bg-white/50 rounded-xl border border-stone-100 space-y-1 hover:bg-white hover:border-purple-200 transition-all text-left"
                       >
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-stone-700">{result.playerName}</span>
-                          <span className="font-mono font-bold text-emerald-600">
-                            {result.correct} / {result.total}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-bold text-emerald-600">
+                              {result.correct} / {result.total}
+                            </span>
+                            <Info className="w-3 h-3 text-stone-300" />
+                          </div>
                         </div>
                         <div className="text-[10px] text-stone-400 flex flex-wrap gap-1">
                           {(result.multiplicationTables?.length ?? 0) > 0 && (
@@ -443,7 +604,7 @@ export default function App() {
                             <span>÷: {result.divisionTables.join(', ')}</span>
                           )}
                         </div>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -489,7 +650,7 @@ export default function App() {
                     <ChevronLeft className="w-6 h-6" />
                   </button>
                   <span className="font-bold text-stone-400">
-                    Vraag {Math.min(stats.total + 1, activeTotal)} van {activeTotal}
+                    Vraag {stats.total + 1} van {activeTotal}
                   </span>
                   <div className="w-10" />
                 </div>
@@ -533,10 +694,31 @@ export default function App() {
                       w-full text-center text-5xl font-bold py-4 rounded-2xl border-4 outline-none transition-all
                       ${feedback === 'correct' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 
                         feedback === 'incorrect' ? 'border-red-500 bg-red-50 text-red-700' : 
+                        isListening ? 'border-purple-400 bg-purple-50 shadow-[0_0_15px_rgba(168,85,247,0.2)]' :
                         'border-stone-200 focus:border-emerald-400 bg-white'}
                     `}
                     placeholder="?"
                   />
+                  
+                  {settings.voiceInputEnabled && (
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col items-end gap-2">
+                      <button
+                        type="button"
+                        onClick={toggleListening}
+                        className={`
+                          p-3 rounded-xl transition-all
+                          ${isListening ? 'bg-red-100 text-red-500 animate-pulse' : 'bg-stone-100 text-stone-400'}
+                        `}
+                      >
+                        {isListening ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
+                      </button>
+                      {micError && (
+                        <div className="absolute top-full mt-2 right-0 bg-red-500 text-white text-[10px] px-2 py-1 rounded shadow-lg whitespace-nowrap z-10">
+                          {micError}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   
                   <AnimatePresence>
                     {feedback && (
@@ -640,10 +822,88 @@ export default function App() {
         </AnimatePresence>
       </main>
 
+      <AnimatePresence>
+        {selectedSession && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            onClick={() => setSelectedSession(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white rounded-3xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="p-6 border-b border-stone-100 flex items-center justify-between bg-stone-50">
+                <div>
+                  <h3 className="text-xl font-bold text-stone-800">{selectedSession.playerName}</h3>
+                  <p className="text-xs text-stone-400">
+                    {new Date(selectedSession.timestamp).toLocaleString('nl-NL')}
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setSelectedSession(null)}
+                  className="p-2 hover:bg-stone-200 rounded-full transition-colors"
+                >
+                  <X className="w-6 h-6 text-stone-400" />
+                </button>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-emerald-50 p-4 rounded-2xl text-center">
+                    <div className="text-2xl font-bold text-emerald-600">{selectedSession.correct}</div>
+                    <div className="text-[10px] text-emerald-600/60 font-bold uppercase">Goed</div>
+                  </div>
+                  <div className="bg-red-50 p-4 rounded-2xl text-center">
+                    <div className="text-2xl font-bold text-red-600">{selectedSession.total - selectedSession.correct}</div>
+                    <div className="text-[10px] text-red-600/60 font-bold uppercase">Fout</div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold text-stone-400 uppercase tracking-widest">Selectie</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedSession.multiplicationTables.map(t => (
+                      <span key={`m-${t}`} className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold">× {t}</span>
+                    ))}
+                    {selectedSession.divisionTables.map(t => (
+                      <span key={`d-${t}`} className="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs font-bold">÷ {t}</span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold text-stone-400 uppercase tracking-widest">Sommen</h4>
+                  <div className="space-y-2">
+                    {selectedSession.history.map((item, i) => (
+                      <div key={i} className="flex items-center justify-between py-2 border-b border-stone-50 last:border-0">
+                        <span className="text-stone-600 font-medium">
+                          {item.exercise.a} {item.exercise.op === 'multiplication' ? '×' : '÷'} {item.exercise.b} = {item.exercise.result}
+                        </span>
+                        {item.correct ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-red-500" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <footer className="mt-8 text-center text-stone-400 text-xs space-y-1">
         <p>Gemaakt voor kleine kampioenen 🌟</p>
         <p>Deze app is met behulp van AI gemaakt door Glenn Evens.</p>
-        <p className="opacity-50 pt-2">v1.4.0</p>
+        <p className="opacity-50 pt-2">v1.5.0</p>
       </footer>
     </div>
   );

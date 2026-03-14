@@ -14,6 +14,7 @@ export interface UserSettings {
   multiplicationTables: number[];
   divisionTables: number[];
   exerciseCount: 10 | 20 | 50 | 'all';
+  voiceInputEnabled: boolean;
 }
 
 export interface SessionResult {
@@ -24,6 +25,7 @@ export interface SessionResult {
   timestamp: number;
   multiplicationTables: number[];
   divisionTables: number[];
+  history: { exercise: Exercise; correct: boolean }[];
 }
 
 export interface MasteryData {
