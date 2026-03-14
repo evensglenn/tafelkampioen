@@ -65,7 +65,12 @@ export default function App() {
   const [timeLeft, setTimeLeft] = useState(15);
   const [selectedSession, setSelectedSession] = useState<SessionResult | null>(null);
   const [isListening, setIsListening] = useState(false);
+  const isListeningRef = useRef(false);
   const [micError, setMicError] = useState<string | null>(null);
+
+  useEffect(() => {
+    isListeningRef.current = isListening;
+  }, [isListening]);
   
   const inputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -111,8 +116,12 @@ export default function App() {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) return;
 
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
     const recognition = new SpeechRecognition();
-    recognition.continuous = true;
+    // On iOS, continuous mode is often flaky. Setting it to false and 
+    // relying on onend to restart is sometimes more stable.
+    recognition.continuous = !isIOS;
     recognition.interimResults = true;
     recognition.lang = 'nl-NL';
 
@@ -139,16 +148,29 @@ export default function App() {
         'tachtig': '80', 'negentig': '90', 'honderd': '100'
       };
 
-      let detectedNumber = transcript.replace(/[^0-9]/g, '');
+      // Try to find numbers in the transcript
+      // 1. Look for digit sequences
+      const digitMatches = transcript.match(/\d+/g);
       
-      if (!detectedNumber) {
-        const words = transcript.split(' ');
-        for (const word of words) {
-          if (numberMap[word]) {
-            detectedNumber = numberMap[word];
-            break;
-          }
+      // 2. Look for word numbers
+      const words = transcript.split(/[\s-]+/);
+      const wordNumbers: string[] = [];
+      for (const word of words) {
+        if (numberMap[word]) {
+          wordNumbers.push(numberMap[word]);
         }
+      }
+
+      let detectedNumber = '';
+      
+      if (digitMatches && digitMatches.length > 0) {
+        // If the user said the same number multiple times (e.g. "4 4"), 
+        // or if they corrected themselves, take the last one.
+        // But if it's a single long number (no spaces), match() already handled it.
+        detectedNumber = digitMatches[digitMatches.length - 1];
+      } else if (wordNumbers.length > 0) {
+        // Take the last word-number detected
+        detectedNumber = wordNumbers[wordNumbers.length - 1];
       }
 
       if (detectedNumber) {
@@ -173,24 +195,21 @@ export default function App() {
     recognition.onstart = () => setMicError(null);
 
     recognition.onend = () => {
-      if (isListening) {
-        try {
-          recognition.start();
-        } catch (e) {
-          // Ignore if already started
-        }
+      if (isListeningRef.current) {
+        // Add a small delay for iOS to prevent rapid restart errors
+        setTimeout(() => {
+          if (isListeningRef.current && recognitionRef.current) {
+            try {
+              recognitionRef.current.start();
+            } catch (e) {
+              // Ignore if already started
+            }
+          }
+        }, isIOS ? 300 : 50);
       }
     };
 
     recognitionRef.current = recognition;
-
-    if (isListening) {
-      try {
-        recognition.start();
-      } catch (e) {
-        console.warn('Recognition start failed', e);
-      }
-    }
 
     return () => {
       try {
@@ -198,10 +217,26 @@ export default function App() {
       } catch (e) {}
       recognitionRef.current = null;
     };
-  }, [isListening]);
+  }, []); // Only run once
 
   const toggleListening = () => {
-    setIsListening(prev => !prev);
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    
+    if (!isListening) {
+      setIsListening(true);
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.start();
+        } catch (e) {
+          console.warn('Recognition start failed', e);
+        }
+      }
+    } else {
+      setIsListening(false);
+      try {
+        recognitionRef.current?.stop();
+      } catch (e) {}
+    }
   };
 
   // Stop listening when leaving practice
@@ -931,7 +966,7 @@ export default function App() {
       <footer className="mt-8 text-center text-stone-400 text-xs space-y-1">
         <p>Gemaakt voor kleine kampioenen 🌟</p>
         <p>Deze app is met behulp van AI gemaakt door Glenn Evens.</p>
-        <p className="opacity-50 pt-2">v1.6.0</p>
+        <p className="opacity-50 pt-2">v1.8.2</p>
       </footer>
     </div>
   );
