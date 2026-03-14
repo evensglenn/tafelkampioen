@@ -19,8 +19,6 @@ import {
   Sparkles,
   User,
   History,
-  Mic,
-  MicOff,
   X,
   Info,
   Trash2
@@ -33,7 +31,7 @@ export default function App() {
   const [mode, setMode] = useState<'settings' | 'practice' | 'results'>('settings');
   const [settings, setSettings] = useState<UserSettings>(() => {
     const saved = localStorage.getItem('tafel-settings');
-    return saved ? JSON.parse(saved) : { playerName: '', multiplicationTables: [], divisionTables: [], exerciseCount: 10, voiceInputEnabled: false };
+    return saved ? JSON.parse(saved) : { playerName: '', multiplicationTables: [], divisionTables: [], exerciseCount: 10 };
   });
   const [mastery, setMastery] = useState<MasteryData>(() => {
     const saved = localStorage.getItem('tafel-mastery');
@@ -64,16 +62,8 @@ export default function App() {
   const [activeTotal, setActiveTotal] = useState(0);
   const [timeLeft, setTimeLeft] = useState(15);
   const [selectedSession, setSelectedSession] = useState<SessionResult | null>(null);
-  const [isListening, setIsListening] = useState(false);
-  const isListeningRef = useRef(false);
-  const [micError, setMicError] = useState<string | null>(null);
-
-  useEffect(() => {
-    isListeningRef.current = isListening;
-  }, [isListening]);
   
   const inputRef = useRef<HTMLInputElement>(null);
-  const recognitionRef = useRef<any>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const handleAnswerRef = useRef<(answer: string | null) => void>(() => {});
 
@@ -110,142 +100,6 @@ export default function App() {
       console.warn('Audio afspelen mislukt:', e);
     }
   }, []);
-
-  // Speech Recognition Setup
-  useEffect(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
-
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-    const recognition = new SpeechRecognition();
-    // On iOS, continuous mode is often flaky. Setting it to false and 
-    // relying on onend to restart is sometimes more stable.
-    recognition.continuous = !isIOS;
-    recognition.interimResults = true;
-    recognition.lang = 'nl-NL';
-
-    recognition.onresult = (event: any) => {
-      let finalTranscript = '';
-      let interimTranscript = '';
-
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript;
-        } else {
-          interimTranscript += event.results[i][0].transcript;
-        }
-      }
-
-      const transcript = (finalTranscript || interimTranscript).toLowerCase();
-      
-      const numberMap: { [key: string]: string } = {
-        'nul': '0', 'één': '1', 'een': '1', 'twee': '2', 'drie': '3', 'vier': '4', 
-        'vijf': '5', 'zes': '6', 'zeven': '7', 'acht': '8', 'negen': '9', 'tien': '10',
-        'elf': '11', 'twaalf': '12', 'dertien': '13', 'veertien': '14', 'vijftien': '15',
-        'zestien': '16', 'zeventien': '17', 'achttien': '18', 'negentien': '19', 'twintig': '20',
-        'dertig': '30', 'veertig': '40', 'vijftig': '50', 'zestig': '60', 'zeventig': '70',
-        'tachtig': '80', 'negentig': '90', 'honderd': '100'
-      };
-
-      // Try to find numbers in the transcript
-      // 1. Look for digit sequences
-      const digitMatches = transcript.match(/\d+/g);
-      
-      // 2. Look for word numbers
-      const words = transcript.split(/[\s-]+/);
-      const wordNumbers: string[] = [];
-      for (const word of words) {
-        if (numberMap[word]) {
-          wordNumbers.push(numberMap[word]);
-        }
-      }
-
-      let detectedNumber = '';
-      
-      if (digitMatches && digitMatches.length > 0) {
-        // If the user said the same number multiple times (e.g. "4 4"), 
-        // or if they corrected themselves, take the last one.
-        // But if it's a single long number (no spaces), match() already handled it.
-        detectedNumber = digitMatches[digitMatches.length - 1];
-      } else if (wordNumbers.length > 0) {
-        // Take the last word-number detected
-        detectedNumber = wordNumbers[wordNumbers.length - 1];
-      }
-
-      if (detectedNumber) {
-        setUserAnswer(detectedNumber);
-        if (finalTranscript) {
-          handleAnswerRef.current(detectedNumber);
-        }
-      }
-    };
-
-    recognition.onerror = (event: any) => {
-      if (event.error === 'aborted' || event.error === 'no-speech') return;
-      console.error('Speech recognition error', event.error);
-      setIsListening(false);
-      if (event.error === 'not-allowed') {
-        setMicError('Microfoon toegang geweigerd. Controleer je browser instellingen.');
-      } else {
-        setMicError(`Fout bij spraakherkenning: ${event.error}`);
-      }
-    };
-
-    recognition.onstart = () => setMicError(null);
-
-    recognition.onend = () => {
-      if (isListeningRef.current) {
-        // Add a small delay for iOS to prevent rapid restart errors
-        setTimeout(() => {
-          if (isListeningRef.current && recognitionRef.current) {
-            try {
-              recognitionRef.current.start();
-            } catch (e) {
-              // Ignore if already started
-            }
-          }
-        }, isIOS ? 300 : 50);
-      }
-    };
-
-    recognitionRef.current = recognition;
-
-    return () => {
-      try {
-        recognition.stop();
-      } catch (e) {}
-      recognitionRef.current = null;
-    };
-  }, []); // Only run once
-
-  const toggleListening = () => {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    
-    if (!isListening) {
-      setIsListening(true);
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.start();
-        } catch (e) {
-          console.warn('Recognition start failed', e);
-        }
-      }
-    } else {
-      setIsListening(false);
-      try {
-        recognitionRef.current?.stop();
-      } catch (e) {}
-    }
-  };
-
-  // Stop listening when leaving practice
-  useEffect(() => {
-    if (mode !== 'practice' && isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
-    }
-  }, [mode, isListening]);
 
   const handleAnswer = useCallback((answer: string | null) => {
     if (!currentExercise || feedback) return;
@@ -561,27 +415,6 @@ export default function App() {
                 <div className="pt-6 border-t border-stone-100 space-y-6">
                   <div>
                     <h3 className="text-sm font-bold uppercase tracking-wider text-stone-400 mb-4 flex items-center gap-2">
-                      <Mic className="w-4 h-4" /> Spraakherkenning
-                    </h3>
-                    <button
-                      onClick={() => setSettings(prev => ({ ...prev, voiceInputEnabled: !prev.voiceInputEnabled }))}
-                      className={`
-                        w-full py-3 rounded-xl font-bold transition-all duration-200 flex items-center justify-center gap-2
-                        ${settings.voiceInputEnabled
-                          ? 'bg-purple-100 text-purple-600 border-2 border-purple-200'
-                          : 'bg-stone-100 text-stone-400 border-2 border-transparent'}
-                      `}
-                    >
-                      {settings.voiceInputEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
-                      {settings.voiceInputEnabled ? 'Ingeschakeld' : 'Uitgeschakeld'}
-                    </button>
-                    <p className="text-[10px] text-stone-400 mt-2 text-center italic">
-                      Zeg het getal hardop om te antwoorden (alleen Chrome/Edge)
-                    </p>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-stone-400 mb-4 flex items-center gap-2">
                       <Sparkles className="w-4 h-4" /> Aantal sommen
                     </h3>
                     <div className="grid grid-cols-4 gap-2">
@@ -757,31 +590,10 @@ export default function App() {
                       w-full text-center text-5xl font-bold py-4 rounded-2xl border-4 outline-none transition-all
                       ${feedback === 'correct' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 
                         feedback === 'incorrect' ? 'border-red-500 bg-red-50 text-red-700' : 
-                        isListening ? 'border-purple-400 bg-purple-50 shadow-[0_0_15px_rgba(168,85,247,0.2)]' :
                         'border-stone-200 focus:border-emerald-400 bg-white'}
                     `}
                     placeholder="?"
                   />
-                  
-                  {settings.voiceInputEnabled && (
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col items-end gap-2">
-                      <button
-                        type="button"
-                        onClick={toggleListening}
-                        className={`
-                          p-3 rounded-xl transition-all
-                          ${isListening ? 'bg-red-100 text-red-500 animate-pulse' : 'bg-stone-100 text-stone-400'}
-                        `}
-                      >
-                        {isListening ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
-                      </button>
-                      {micError && (
-                        <div className="absolute top-full mt-2 right-0 bg-red-500 text-white text-[10px] px-2 py-1 rounded shadow-lg whitespace-nowrap z-10">
-                          {micError}
-                        </div>
-                      )}
-                    </div>
-                  )}
                   
                   <AnimatePresence>
                     {feedback && (
@@ -966,7 +778,7 @@ export default function App() {
       <footer className="mt-8 text-center text-stone-400 text-xs space-y-1">
         <p>Gemaakt voor kleine kampioenen 🌟</p>
         <p>Deze app is met behulp van AI gemaakt door Glenn Evens.</p>
-        <p className="opacity-50 pt-2">v1.8.2</p>
+        <p className="opacity-50 pt-2">v1.9.0</p>
       </footer>
     </div>
   );
