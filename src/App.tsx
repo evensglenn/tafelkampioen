@@ -576,44 +576,59 @@ export default function App() {
                   </motion.div>
                 )}
 
-                <form onSubmit={handleSubmit} className="relative">
-                  <input
-                    ref={inputRef}
-                    autoFocus
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    value={userAnswer}
-                    onChange={(e) => setUserAnswer(e.target.value)}
-                    disabled={!!feedback}
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="relative">
+                    <input
+                      ref={inputRef}
+                      autoFocus
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={userAnswer}
+                      onChange={(e) => setUserAnswer(e.target.value)}
+                      disabled={!!feedback}
+                      className={`
+                        w-full text-center text-5xl font-bold py-4 rounded-2xl border-4 outline-none transition-all
+                        ${feedback === 'correct' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 
+                          feedback === 'incorrect' ? 'border-red-500 bg-red-50 text-red-700' : 
+                          'border-stone-200 focus:border-emerald-400 bg-white'}
+                      `}
+                      placeholder="?"
+                    />
+                    
+                    <AnimatePresence>
+                      {feedback && (
+                        <motion.div
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          className="absolute -right-4 -top-4"
+                        >
+                          {feedback === 'correct' ? (
+                            <CheckCircle2 className="w-12 h-12 text-emerald-500 fill-white" />
+                          ) : (
+                            <XCircle className="w-12 h-12 text-red-500 fill-white" />
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={!!feedback || userAnswer === ''}
                     className={`
-                      w-full text-center text-5xl font-bold py-4 rounded-2xl border-4 outline-none transition-all
-                      ${feedback === 'correct' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 
-                        feedback === 'incorrect' ? 'border-red-500 bg-red-50 text-red-700' : 
-                        'border-stone-200 focus:border-emerald-400 bg-white'}
+                      w-full py-4 rounded-2xl font-bold text-xl shadow-lg transition-all flex items-center justify-center gap-2
+                      ${!!feedback || userAnswer === '' 
+                        ? 'bg-stone-100 text-stone-300 cursor-not-allowed' 
+                        : 'bg-emerald-600 text-white hover:bg-emerald-700 active:scale-[0.98] shadow-emerald-100'}
                     `}
-                    placeholder="?"
-                  />
-                  
-                  <AnimatePresence>
-                    {feedback && (
-                      <motion.div
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        className="absolute -right-4 -top-4"
-                      >
-                        {feedback === 'correct' ? (
-                          <CheckCircle2 className="w-12 h-12 text-emerald-500 fill-white" />
-                        ) : (
-                          <XCircle className="w-12 h-12 text-red-500 fill-white" />
-                        )}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  >
+                    Controleer
+                  </button>
                 </form>
 
-                <p className="mt-6 text-stone-400 text-sm font-medium">
-                  Druk op Enter om te controleren
+                <p className="mt-4 text-stone-400 text-[10px] font-medium uppercase tracking-widest">
+                  Klik op de knop of druk op Enter
                 </p>
               </div>
             </motion.div>
@@ -778,7 +793,7 @@ export default function App() {
       <footer className="mt-8 text-center text-stone-400 text-xs space-y-1">
         <p>Gemaakt voor kleine kampioenen 🌟</p>
         <p>Deze app is met behulp van AI gemaakt door Glenn Evens.</p>
-        <p className="opacity-50 pt-2">v1.9.1</p>
+        <p className="opacity-50 pt-2">v1.9.2</p>
       </footer>
     </div>
   );
