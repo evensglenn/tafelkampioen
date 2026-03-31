@@ -109,9 +109,7 @@ export default function App() {
     setFeedback(isCorrect ? 'correct' : 'incorrect');
     
     // Update mastery
-    const tableKey = currentExercise.op === 'multiplication' 
-      ? (settings.multiplicationTables.includes(currentExercise.a) ? currentExercise.a : currentExercise.b)
-      : currentExercise.b;
+    const tableKey = currentExercise.b;
     
     const key = `${currentExercise.op}-${tableKey}`;
     setMastery(prev => {
@@ -269,7 +267,7 @@ export default function App() {
     
     settings.multiplicationTables.forEach(table => {
       for (let i = 0; i <= 10; i++) {
-        pool.push({ a: table, b: i, op: 'multiplication', result: table * i });
+        pool.push({ a: i, b: table, op: 'multiplication', result: table * i });
       }
     });
 
