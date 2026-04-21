@@ -14,6 +14,7 @@ export interface UserSettings {
   multiplicationTables: number[];
   divisionTables: number[];
   exerciseCount: 10 | 20 | 50 | 'all';
+  personalBest?: number; // Lowest average time per sum in ms
 }
 
 export interface SessionResult {
@@ -22,6 +23,8 @@ export interface SessionResult {
   correct: number;
   total: number;
   timestamp: number;
+  duration?: number; // Total time in ms
+  averageTimePerSum?: number; // Average time in ms
   multiplicationTables: number[];
   divisionTables: number[];
   history: { exercise: Exercise; correct: boolean }[];

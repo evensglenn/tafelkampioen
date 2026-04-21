@@ -62,6 +62,8 @@ export default function App() {
   const [activeTotal, setActiveTotal] = useState(0);
   const [timeLeft, setTimeLeft] = useState(15);
   const [selectedSession, setSelectedSession] = useState<SessionResult | null>(null);
+  const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
+  const [isNewRecord, setIsNewRecord] = useState(false);
   
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -131,12 +133,28 @@ export default function App() {
     setTimeout(() => {
       if (nextStats.total >= activeTotal) {
         // Save to session history
+        const now = Date.now();
+        const duration = sessionStartTime ? now - sessionStartTime : 0;
+        const averageTimePerSum = duration / nextStats.total;
+        const allCorrect = nextStats.correct === nextStats.total;
+
+        let recordBeaten = false;
+        if (allCorrect) {
+          if (!settings.personalBest || averageTimePerSum < settings.personalBest) {
+            setSettings(prev => ({ ...prev, personalBest: averageTimePerSum }));
+            recordBeaten = true;
+          }
+        }
+        setIsNewRecord(recordBeaten);
+
         const result: SessionResult = {
           id: crypto.randomUUID(),
           playerName: settings.playerName || 'Anoniem',
           correct: nextStats.correct,
           total: nextStats.total,
-          timestamp: Date.now(),
+          timestamp: now,
+          duration,
+          averageTimePerSum,
           multiplicationTables: [...settings.multiplicationTables],
           divisionTables: [...settings.divisionTables],
           history: [...history, { exercise: currentExercise, correct: isCorrect }]
@@ -144,18 +162,19 @@ export default function App() {
         setSessionHistory(prev => [result, ...prev].slice(0, 5)); // Keep last 5
         
         // Play success sound if 0 errors
-        if (nextStats.correct === nextStats.total) {
+        if (allCorrect) {
           playSuccessSound();
           
           confetti({
             particleCount: 150,
             spread: 70,
             origin: { y: 0.6 },
-            colors: ['#10b981', '#3b82f6', '#f59e0b']
+            colors: recordBeaten ? ['#fbbf24', '#f59e0b', '#d97706'] : ['#10b981', '#3b82f6', '#f59e0b']
           });
         }
 
         setMode('results');
+        setSessionStartTime(null);
       } else {
         setExercisePool(prev => prev.slice(1));
         setCurrentExercise(null); // Clear current to trigger useEffect
@@ -293,6 +312,8 @@ export default function App() {
     setMode('practice');
     setUserAnswer('');
     setFeedback(null);
+    setSessionStartTime(Date.now());
+    setIsNewRecord(false);
     startTimer();
   };
 
@@ -411,6 +432,24 @@ export default function App() {
                 </div>
 
                 <div className="pt-6 border-t border-stone-100 space-y-6">
+                  {settings.personalBest && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-amber-50 border border-amber-100 rounded-2xl p-4 flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="bg-amber-100 p-2 rounded-xl text-amber-600">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] uppercase font-bold text-amber-600/60 tracking-wider">Snelheidsrecord</p>
+                          <p className="text-amber-900 font-bold">{(settings.personalBest / 1000).toFixed(2)}s <span className="text-xs font-normal opacity-60">per som</span></p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
                   <div>
                     <h3 className="text-sm font-bold uppercase tracking-wider text-stone-400 mb-4 flex items-center gap-2">
                       <Sparkles className="w-4 h-4" /> Aantal sommen
@@ -665,6 +704,33 @@ export default function App() {
                 </div>
               </div>
 
+              {stats.correct === stats.total && (
+                <motion.div 
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                  className={`p-6 rounded-3xl text-center relative overflow-hidden ${isNewRecord ? 'bg-amber-50 border-4 border-amber-200' : 'bg-blue-50 border-4 border-blue-100'}`}
+                >
+                  {isNewRecord && (
+                    <div className="absolute -top-1 -right-1 bg-amber-400 text-white px-3 py-1 text-[10px] font-black uppercase tracking-tighter rotate-12 shadow-sm">
+                      Nieuw Record!
+                    </div>
+                  )}
+                  <div className="flex flex-col items-center gap-1">
+                    <p className={`text-xs font-bold uppercase tracking-widest ${isNewRecord ? 'text-amber-600' : 'text-blue-500'}`}>
+                      {isNewRecord ? 'WAUW! NIEUW RECORD!' : 'Gemiddelde Snelheid'}
+                    </p>
+                    <div className="flex items-baseline gap-1">
+                      <span className={`text-5xl font-black ${isNewRecord ? 'text-amber-900' : 'text-blue-900'}`}>
+                        {(sessionHistory[0]?.averageTimePerSum ? sessionHistory[0].averageTimePerSum / 1000 : 0).toFixed(2)}
+                      </span>
+                      <span className={`text-xl font-bold ${isNewRecord ? 'text-amber-700' : 'text-blue-700'}`}>sec</span>
+                    </div>
+                    <p className={`text-xs mt-1 ${isNewRecord ? 'text-amber-600/60' : 'text-blue-600/60'} font-medium`}>per som</p>
+                  </div>
+                </motion.div>
+              )}
+
               <div className="space-y-3">
                 {stats.total - stats.correct > 0 && (
                   <button
@@ -742,14 +808,20 @@ export default function App() {
               </div>
               
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-3">
                   <div className="bg-emerald-50 p-4 rounded-2xl text-center">
-                    <div className="text-2xl font-bold text-emerald-600">{selectedSession.correct}</div>
+                    <div className="text-xl font-bold text-emerald-600">{selectedSession.correct}</div>
                     <div className="text-[10px] text-emerald-600/60 font-bold uppercase">Goed</div>
                   </div>
                   <div className="bg-red-50 p-4 rounded-2xl text-center">
-                    <div className="text-2xl font-bold text-red-600">{selectedSession.total - selectedSession.correct}</div>
+                    <div className="text-xl font-bold text-red-600">{selectedSession.total - selectedSession.correct}</div>
                     <div className="text-[10px] text-red-600/60 font-bold uppercase">Fout</div>
+                  </div>
+                  <div className="bg-blue-50 p-4 rounded-2xl text-center">
+                    <div className="text-xl font-bold text-blue-600">
+                      {selectedSession.averageTimePerSum ? (selectedSession.averageTimePerSum / 1000).toFixed(1) : '-'}s
+                    </div>
+                    <div className="text-[10px] text-blue-600/60 font-bold uppercase">Snelheid</div>
                   </div>
                 </div>
 
