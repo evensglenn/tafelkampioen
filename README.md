@@ -1,20 +1,45 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# TafelKampioen 🧠
 
-# Run and deploy your AI Studio app
+Een interactieve webapp om de tafels van vermenigvuldiging en deling te oefenen — gemaakt voor kinderen die op school met de tafels bezig zijn.
 
-This contains everything you need to run your app locally.
+🔗 **Live:** [evensglenn.github.io/tafelkampioen](https://evensglenn.github.io/tafelkampioen/)
 
-View your app in AI Studio: https://ai.studio/apps/d78e4fec-e04b-4eaa-8796-f8897b19d921
+## Functies
 
-## Run Locally
+- Oefen vermenigvuldigen en delen, per tafel te kiezen (0 t.e.m. 10), met een instelbaar aantal sommen per ronde
+- Optionele tijdslimiet per vraag (15 sec) met snelheidsmeting — zet je uit voor rustig oefenen zonder tijdsdruk
+- Snelheidsrecord en de laatste 5 sessies worden lokaal bijgehouden (in de browser, geen account nodig)
+- Licht / donker / automatisch thema — automatisch volgt live de systeeminstelling van het toestel
+- Meldt vanzelf wanneer er een nieuwere versie van de app op GitHub Pages staat
+- Responsive layout: op bredere schermen (iPad landscape, laptop) passen de tafelkeuzes in één rij, wat minder scrollen betekent
 
-**Prerequisites:**  Node.js
+## Lokaal draaien
 
+**Vereisten:** Node.js
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+```bash
+npm install
+npm run dev
+```
+
+De app draait dan op http://localhost:3000/tafelkampioen/
+
+## Build
+
+```bash
+npm run build
+```
+
+Bouwt de statische site naar `dist/`. Dit synchroniseert automatisch het versienummer uit `package.json` naar `public/version.json` (via `scripts/sync-version.mjs`) — dat bestand gebruikt de app om te detecteren of er een nieuwere versie live staat.
+
+## Deployen
+
+Elke push naar `main` bouwt en deployt automatisch naar GitHub Pages via de workflow in [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml).
+
+## Tech stack
+
+- React + TypeScript
+- Vite
+- Tailwind CSS v4
+- [Motion](https://motion.dev/) voor animaties
+- canvas-confetti voor het feestje bij een foutloze ronde
