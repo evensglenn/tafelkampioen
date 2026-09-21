@@ -32,6 +32,31 @@ const TABLES = Array.from({ length: 11 }, (_, i) => i);
 const APP_VERSION = __APP_VERSION__;
 const VERSION_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minuten
 
+const PERFECT_SCORE_MESSAGES = [
+  'Wow, geen enkele fout! Jij bent een echte tafelkampioen!',
+  'Foutloos! Dat verdient een gouden medaille! 🏅',
+  'Perfect! Jij hebt deze tafels helemaal onder de knie.',
+  'Voltreffer! Alles goed, knap hoor!',
+  'Wauw, 100%! Jij bent niet te stoppen!',
+  'Superbrein! Geen enkele som ontsnapte aan jou.',
+];
+
+const GOOD_SCORE_MESSAGES = [
+  'Goed bezig! Nog even oefenen en het is perfect.',
+  'Sterk gedaan! Je wordt steeds beter.',
+  'Knap werk! Je bent al een heel eind op weg.',
+  'Mooi resultaat! Op naar de volgende ronde.',
+  'Goed gedaan! Je hersenen hebben hard gewerkt.',
+];
+
+const ENCOURAGE_MESSAGES = [
+  'Goed geprobeerd! Oefening baart kunst.',
+  'Elke keer oefenen maakt je sterker. Ga zo door!',
+  'Niet getreurd, volgende keer gaat het nog beter!',
+  'Je bent op de goede weg, blijf oefenen!',
+  'Fouten maken hoort erbij — zo leer je het echt.',
+];
+
 export default function App() {
   const [mode, setMode] = useState<'settings' | 'practice' | 'results'>('settings');
   const [settings, setSettings] = useState<UserSettings>(() => {
@@ -77,6 +102,7 @@ export default function App() {
   const [selectedSession, setSelectedSession] = useState<SessionResult | null>(null);
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
   const [isNewRecord, setIsNewRecord] = useState(false);
+  const [resultMessage, setResultMessage] = useState('');
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [isReloading, setIsReloading] = useState(false);
   
@@ -162,6 +188,14 @@ export default function App() {
           }
         }
         setIsNewRecord(recordBeaten);
+
+        const scoreRatio = nextStats.correct / nextStats.total;
+        const messagePool = allCorrect
+          ? PERFECT_SCORE_MESSAGES
+          : scoreRatio >= 0.7
+            ? GOOD_SCORE_MESSAGES
+            : ENCOURAGE_MESSAGES;
+        setResultMessage(messagePool[Math.floor(Math.random() * messagePool.length)]);
 
         const result: SessionResult = {
           id: crypto.randomUUID(),
@@ -853,7 +887,7 @@ export default function App() {
                   </motion.div>
                 </div>
                 <h2 className="text-3xl font-bold text-stone-800">Goed gedaan, {settings.playerName}!</h2>
-                <p className="text-stone-500">Je bent echt een Einstein.</p>
+                <p className="text-stone-500">{resultMessage}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
