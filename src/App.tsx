@@ -29,7 +29,7 @@ import {
   Moon,
   Monitor
 } from 'lucide-react';
-import { Exercise, Operation, UserSettings, MasteryData, SessionResult, ThemePreference } from './types';
+import { Exercise, Operation, UserSettings, SessionResult, ThemePreference } from './types';
 
 const TABLES = Array.from({ length: 11 }, (_, i) => i);
 const APP_VERSION = __APP_VERSION__;
@@ -80,10 +80,6 @@ export default function App() {
       theme: 'auto',
       ...parsed
     };
-  });
-  const [mastery, setMastery] = useState<MasteryData>(() => {
-    const saved = localStorage.getItem('tafel-mastery');
-    return saved ? JSON.parse(saved) : {};
   });
   const [sessionHistory, setSessionHistory] = useState<SessionResult[]>(() => {
     const saved = localStorage.getItem('tafel-session-history');
@@ -160,18 +156,6 @@ export default function App() {
     stopTimer();
     const isCorrect = answer !== null && parseInt(answer) === currentExercise.result;
     setFeedback(isCorrect ? 'correct' : 'incorrect');
-    
-    // Update mastery
-    const tableKey = currentExercise.b;
-    
-    const key = `${currentExercise.op}-${tableKey}`;
-    setMastery(prev => {
-      const currentScore = prev[key] || 0;
-      const nextScore = isCorrect 
-        ? Math.min(10, currentScore + 1) 
-        : Math.max(0, currentScore - 1);
-      return { ...prev, [key]: nextScore };
-    });
 
     const nextStats = {
       correct: stats.correct + (isCorrect ? 1 : 0),
@@ -362,12 +346,13 @@ export default function App() {
   }, [settings]);
 
   useEffect(() => {
-    localStorage.setItem('tafel-mastery', JSON.stringify(mastery));
-  }, [mastery]);
-
-  useEffect(() => {
     localStorage.setItem('tafel-session-history', JSON.stringify(sessionHistory));
   }, [sessionHistory]);
+
+  // One-time cleanup: mastery tracking was removed, drop any leftover data.
+  useEffect(() => {
+    localStorage.removeItem('tafel-mastery');
+  }, []);
 
   const totalPossible = (settings.multiplicationTables.length * 11) + (settings.divisionTables.length * 11);
 

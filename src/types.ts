@@ -33,7 +33,3 @@ export interface SessionResult {
   divisionTables: number[];
   history: { exercise: Exercise; correct: boolean }[];
 }
-
-export interface MasteryData {
-  [key: string]: number; // Format: "multiplication-5" or "division-5"
-}
