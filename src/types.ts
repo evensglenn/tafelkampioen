@@ -1,4 +1,5 @@
 export type Operation = 'multiplication' | 'division';
+export type ThemePreference = 'light' | 'dark' | 'auto';
 
 export interface Exercise {
   a: number;
@@ -16,6 +17,7 @@ export interface UserSettings {
   exerciseCount: 10 | 20 | 50 | 'all';
   personalBest?: number; // Lowest average time per sum in ms
   trackTime?: boolean; // Whether to track time and enforce countdown timer
+  theme?: ThemePreference; // Light/dark mode preference, defaults to 'auto'
 }
 
 export interface SessionResult {

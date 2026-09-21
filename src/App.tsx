@@ -24,13 +24,22 @@ import {
   Trash2,
   Timer,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  Sun,
+  Moon,
+  Monitor
 } from 'lucide-react';
-import { Exercise, Operation, UserSettings, MasteryData, SessionResult } from './types';
+import { Exercise, Operation, UserSettings, MasteryData, SessionResult, ThemePreference } from './types';
 
 const TABLES = Array.from({ length: 11 }, (_, i) => i);
 const APP_VERSION = __APP_VERSION__;
 const VERSION_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minuten
+
+const THEME_OPTIONS: { value: ThemePreference; label: string; icon: typeof Sun }[] = [
+  { value: 'light', label: 'Licht', icon: Sun },
+  { value: 'auto', label: 'Automatisch', icon: Monitor },
+  { value: 'dark', label: 'Donker', icon: Moon },
+];
 
 const PERFECT_SCORE_MESSAGES = [
   'Wow, geen enkele fout! Jij bent een echte tafelkampioen!',
@@ -68,6 +77,7 @@ export default function App() {
       divisionTables: [],
       exerciseCount: 10,
       trackTime: true,
+      theme: 'auto',
       ...parsed
     };
   });
@@ -328,6 +338,25 @@ export default function App() {
     };
   }, []);
 
+  // Apply the light/dark/auto theme preference to <html data-theme="...">
+  useEffect(() => {
+    const theme = settings.theme || 'auto';
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+    const applyResolvedTheme = () => {
+      const resolved = theme === 'auto' ? (mediaQuery.matches ? 'dark' : 'light') : theme;
+      document.documentElement.setAttribute('data-theme', resolved);
+      document.documentElement.style.colorScheme = resolved;
+    };
+
+    applyResolvedTheme();
+
+    if (theme === 'auto') {
+      mediaQuery.addEventListener('change', applyResolvedTheme);
+      return () => mediaQuery.removeEventListener('change', applyResolvedTheme);
+    }
+  }, [settings.theme]);
+
   useEffect(() => {
     localStorage.setItem('tafel-settings', JSON.stringify(settings));
   }, [settings]);
@@ -453,9 +482,45 @@ export default function App() {
 
   const isPracticing = mode === 'practice';
 
+  const themeToggle = (
+    <div className="inline-flex items-center p-0.5 rounded-full bg-stone-100 dark:bg-stone-800/80 border border-stone-200/60 dark:border-stone-700/60">
+      {THEME_OPTIONS.map(opt => {
+        const Icon = opt.icon;
+        const isActive = (settings.theme || 'auto') === opt.value;
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => setSettings(prev => ({ ...prev, theme: opt.value }))}
+            aria-label={opt.label}
+            aria-pressed={isActive}
+            title={opt.label}
+            className={`
+              p-1 rounded-full transition-colors
+              ${isActive
+                ? 'bg-white dark:bg-stone-600 text-purple-600 dark:text-purple-300 shadow-sm'
+                : 'text-stone-400 hover:text-stone-600 dark:text-stone-500 dark:hover:text-stone-300'}
+            `}
+          >
+            <Icon className="w-3 h-3" />
+          </button>
+        );
+      })}
+    </div>
+  );
+
   return (
-    <div className={`max-w-2xl mx-auto px-4 min-h-screen flex flex-col font-sans ${isPracticing ? 'py-4' : 'py-8'}`}>
-      <header className={`text-center ${isPracticing ? 'mb-2' : 'mb-8'}`}>
+    <div className={`max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto px-4 min-h-screen flex flex-col font-sans transition-[max-width] duration-300 ${isPracticing ? 'py-4' : 'py-8'}`}>
+      {/* Small screens: logo takes the full width, so the toggle gets its own row above it */}
+      <div className="flex justify-end mb-1.5 lg:hidden">
+        {themeToggle}
+      </div>
+
+      <header className={`relative text-center ${isPracticing ? 'mb-2' : 'mb-8'}`}>
+        {/* Wide screens: plenty of room beside the logo, so the toggle sits inline and costs no extra height */}
+        <div className="hidden lg:block absolute right-0 top-1/2 -translate-y-1/2">
+          {themeToggle}
+        </div>
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
@@ -466,7 +531,7 @@ export default function App() {
             TafelKampioen
           </h1>
         </motion.div>
-        {!isPracticing && <p className="text-stone-500">Word de meester van de tafels!</p>}
+        {!isPracticing && <p className="text-stone-500 dark:text-stone-400">Word de meester van de tafels!</p>}
       </header>
 
       <AnimatePresence>
@@ -475,7 +540,7 @@ export default function App() {
             initial={{ opacity: 0, y: -10, height: 0 }}
             animate={{ opacity: 1, y: 0, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="mb-6 bg-blue-50 border border-blue-100 text-blue-700 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 overflow-hidden"
+            className="mb-6 bg-blue-50 border border-blue-100 text-blue-700 dark:bg-blue-950/40 dark:border-blue-900/50 dark:text-blue-300 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 overflow-hidden"
           >
             <div className="flex items-center gap-2 text-sm font-semibold">
               <RefreshCw className={`w-4 h-4 shrink-0 ${isReloading ? 'animate-spin' : ''}`} />
@@ -510,7 +575,7 @@ export default function App() {
               className="space-y-8"
             >
               <div className="glass rounded-3xl p-6 space-y-6">
-                <h2 className="text-xl font-semibold flex items-center gap-2 text-stone-700">
+                <h2 className="text-xl font-semibold flex items-center gap-2 text-stone-700 dark:text-stone-200">
                   <Settings className="w-5 h-5" /> Instellingen
                 </h2>
 
@@ -524,7 +589,7 @@ export default function App() {
                       value={settings.playerName}
                       onChange={(e) => setSettings(prev => ({ ...prev, playerName: e.target.value }))}
                       placeholder="Typ je naam..."
-                      className="w-full px-4 py-3 rounded-xl bg-stone-100 border-2 border-transparent focus:border-purple-400 focus:bg-white outline-none transition-all font-medium text-stone-700"
+                      className="w-full px-4 py-3 rounded-xl bg-stone-100 dark:bg-stone-800 border-2 border-transparent focus:border-purple-400 focus:bg-white dark:focus:bg-stone-900 outline-none transition-all font-medium text-stone-700 dark:text-stone-200"
                     />
                   </div>
 
@@ -532,7 +597,7 @@ export default function App() {
                     <h3 className="text-sm font-bold uppercase tracking-wider text-stone-400 mb-3 flex items-center gap-2">
                       <Calculator className="w-4 h-4" /> Vermenigvuldigen (×)
                     </h3>
-                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                    <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-11 gap-2">
                       {TABLES.map(n => (
                         <button
                           key={`mul-${n}`}
@@ -540,8 +605,8 @@ export default function App() {
                           className={`
                             h-12 rounded-xl font-bold transition-all duration-200
                             ${settings.multiplicationTables.includes(n)
-                              ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200 scale-105'
-                              : 'bg-stone-100 text-stone-400 hover:bg-stone-200'}
+                              ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200 dark:shadow-emerald-900/40 scale-105'
+                              : 'bg-stone-100 text-stone-400 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700'}
                           `}
                         >
                           {n}
@@ -554,7 +619,7 @@ export default function App() {
                     <h3 className="text-sm font-bold uppercase tracking-wider text-stone-400 mb-3 flex items-center gap-2">
                       <Divide className="w-4 h-4" /> Delen (÷)
                     </h3>
-                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                    <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-11 gap-2">
                       {TABLES.filter(n => n !== 0).map(n => (
                         <button
                           key={`div-${n}`}
@@ -562,8 +627,8 @@ export default function App() {
                           className={`
                             h-12 rounded-xl font-bold transition-all duration-200
                             ${settings.divisionTables.includes(n)
-                              ? 'bg-blue-500 text-white shadow-lg shadow-blue-200 scale-105'
-                              : 'bg-stone-100 text-stone-400 hover:bg-stone-200'}
+                              ? 'bg-blue-500 text-white shadow-lg shadow-blue-200 dark:shadow-blue-900/40 scale-105'
+                              : 'bg-stone-100 text-stone-400 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700'}
                           `}
                         >
                           {n}
@@ -573,24 +638,24 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="pt-6 border-t border-stone-100 space-y-6">
+                <div className="pt-6 border-t border-stone-100 dark:border-stone-800 space-y-6">
                   {settings.personalBest && (
                     <motion.div 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="bg-amber-50 border border-amber-100 rounded-2xl p-4 flex items-center justify-between"
+                      className="bg-amber-50 border border-amber-100 dark:bg-amber-950/30 dark:border-amber-900/50 rounded-2xl p-4 flex items-center justify-between"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="bg-amber-100 p-2 rounded-xl text-amber-600">
+                        <div className="bg-amber-100 dark:bg-amber-900/40 p-2 rounded-xl text-amber-600 dark:text-amber-400">
                           <Sparkles className="w-5 h-5" />
                         </div>
                         <div>
-                          <p className="text-[10px] uppercase font-bold text-amber-600/60 tracking-wider">Snelheidsrecord</p>
-                          <p className="text-amber-900 font-bold">{(settings.personalBest / 1000).toFixed(2)}s <span className="text-xs font-normal opacity-60">per som</span></p>
+                          <p className="text-[10px] uppercase font-bold text-amber-600/60 dark:text-amber-400/70 tracking-wider">Snelheidsrecord</p>
+                          <p className="text-amber-900 dark:text-amber-200 font-bold">{(settings.personalBest / 1000).toFixed(2)}s <span className="text-xs font-normal opacity-60">per som</span></p>
                         </div>
                       </div>
                       {settings.trackTime === false && (
-                        <span className="text-[10px] bg-amber-100 text-amber-800 px-2.5 py-1 rounded-lg font-semibold">
+                        <span className="text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 px-2.5 py-1 rounded-lg font-semibold">
                           Tijd uit
                         </span>
                       )}
@@ -613,8 +678,8 @@ export default function App() {
                               h-12 rounded-xl font-bold transition-all duration-200
                               ${isDisabled ? 'opacity-20 cursor-not-allowed grayscale' : ''}
                               ${settings.exerciseCount === count
-                                ? 'bg-purple-500 text-white shadow-lg shadow-purple-200 scale-105'
-                                : 'bg-stone-100 text-stone-400 hover:bg-stone-200'}
+                                ? 'bg-purple-500 text-white shadow-lg shadow-purple-200 dark:shadow-purple-900/40 scale-105'
+                                : 'bg-stone-100 text-stone-400 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700'}
                             `}
                           >
                             {count === 'all' ? 'Alle' : count}
@@ -624,11 +689,11 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between bg-orange-50 border border-orange-100 rounded-2xl px-4 py-3">
+                  <div className="flex items-center justify-between bg-orange-50 border border-orange-100 dark:bg-orange-950/30 dark:border-orange-900/50 rounded-2xl px-4 py-3">
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-2">
-                        <Timer className="w-4 h-4 text-orange-500" />
-                        <span className="font-bold text-sm text-stone-700">Tijd bijhouden</span>
+                        <Timer className="w-4 h-4 text-orange-500 dark:text-orange-400" />
+                        <span className="font-bold text-sm text-stone-700 dark:text-stone-200">Tijd bijhouden</span>
                       </div>
                       <p className="text-xs text-stone-400">
                         {settings.trackTime !== false
@@ -643,7 +708,7 @@ export default function App() {
                       onClick={() => setSettings(prev => ({ ...prev, trackTime: !(prev.trackTime !== false) }))}
                       className={`
                         relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none
-                        ${settings.trackTime !== false ? 'bg-emerald-500' : 'bg-stone-200'}
+                        ${settings.trackTime !== false ? 'bg-emerald-500' : 'bg-stone-200 dark:bg-stone-700'}
                       `}
                     >
                       <span
@@ -664,7 +729,7 @@ export default function App() {
                     initial={{ opacity: 0, y: -10, height: 0 }}
                     animate={{ opacity: 1, y: 0, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="bg-red-50 border border-red-100 text-red-600 rounded-2xl px-4 py-3 flex items-center gap-2 text-sm font-semibold overflow-hidden"
+                    className="bg-red-50 border border-red-100 text-red-600 dark:bg-red-950/40 dark:border-red-900/50 dark:text-red-300 rounded-2xl px-4 py-3 flex items-center gap-2 text-sm font-semibold overflow-hidden"
                   >
                     <AlertCircle className="w-5 h-5 shrink-0" />
                     {validationMessage}
@@ -677,8 +742,8 @@ export default function App() {
                 className={`
                   w-full py-4 text-white rounded-2xl font-bold text-xl shadow-xl transition-all flex items-center justify-center gap-2 group
                   ${totalPossible === 0
-                    ? 'bg-stone-300 shadow-none'
-                    : 'bg-emerald-600 shadow-emerald-100 hover:bg-emerald-700'}
+                    ? 'bg-stone-300 dark:bg-stone-700 shadow-none'
+                    : 'bg-emerald-600 shadow-emerald-100 dark:shadow-none hover:bg-emerald-700'}
                 `}
               >
                 <Play className={`w-6 h-6 transition-transform ${totalPossible > 0 ? 'group-hover:translate-x-1' : ''}`} />
@@ -693,7 +758,7 @@ export default function App() {
                     </h3>
                     <button
                       onClick={() => setShowClearHistoryModal(true)}
-                      className="flex items-center gap-1 px-2 py-1 rounded-lg transition-all text-xs font-bold text-stone-300 hover:text-red-400 hover:bg-red-50"
+                      className="flex items-center gap-1 px-2 py-1 rounded-lg transition-all text-xs font-bold text-stone-300 dark:text-stone-600 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40"
                       title="Historiek wissen"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -701,24 +766,24 @@ export default function App() {
                   </div>
                   <div className="space-y-2">
                     {sessionHistory.map((result) => (
-                      <button 
+                      <button
                         key={result.id}
                         onClick={() => setSelectedSession(result)}
-                        className="w-full flex flex-col py-3 px-4 bg-white/50 rounded-xl border border-stone-100 space-y-1 hover:bg-white hover:border-purple-200 transition-all text-left"
+                        className="w-full flex flex-col py-3 px-4 bg-white/50 dark:bg-stone-800/50 rounded-xl border border-stone-100 dark:border-stone-700 space-y-1 hover:bg-white hover:border-purple-200 dark:hover:bg-stone-800 dark:hover:border-purple-800 transition-all text-left"
                       >
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-stone-700">{result.playerName}</span>
+                          <span className="font-bold text-stone-700 dark:text-stone-200">{result.playerName}</span>
                           <div className="flex items-center gap-2">
                             {result.trackTime !== false && result.averageTimePerSum !== undefined && (
-                              <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md flex items-center gap-1">
+                              <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 dark:bg-blue-950/40 dark:text-blue-300 px-2 py-0.5 rounded-md flex items-center gap-1">
                                 <Timer className="w-3 h-3" />
                                 {(result.averageTimePerSum / 1000).toFixed(1)}s
                               </span>
                             )}
-                            <span className="font-mono font-bold text-emerald-600">
+                            <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
                               {result.correct} / {result.total}
                             </span>
-                            <Info className="w-3 h-3 text-stone-300" />
+                            <Info className="w-3 h-3 text-stone-300 dark:text-stone-600" />
                           </div>
                         </div>
                         <div className="text-[10px] text-stone-400 flex flex-wrap gap-1">
@@ -746,18 +811,18 @@ export default function App() {
               exit={{ opacity: 0, scale: 1.05 }}
               className="flex-1 flex flex-col items-center w-full"
             >
-              <div className="w-full max-w-md flex-1 flex flex-col glass rounded-3xl p-8 text-center relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-2 bg-stone-100">
-                  <motion.div 
+              <div className="w-full max-w-md lg:max-w-xl flex-1 flex flex-col glass rounded-3xl p-8 text-center relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-2 bg-stone-100 dark:bg-stone-800">
+                  <motion.div
                     className="h-full bg-emerald-500"
                     initial={{ width: 0 }}
                     animate={{ width: `${(stats.total / activeTotal) * 100}%` }}
                   />
                 </div>
-                
+
                 {/* Timer bar */}
                 {settings.trackTime !== false && (
-                  <div className="absolute top-2 left-0 w-full h-1.5 bg-stone-50 overflow-hidden">
+                  <div className="absolute top-2 left-0 w-full h-1.5 bg-stone-50 dark:bg-stone-800/60 overflow-hidden">
                     <motion.div 
                       className={`h-full transition-colors duration-300 ${timeLeft < 3 ? 'bg-red-500' : 'bg-orange-400'}`}
                       initial={{ width: '100%' }}
@@ -773,7 +838,7 @@ export default function App() {
                       stopTimer();
                       setMode('settings');
                     }}
-                    className="p-2 hover:bg-stone-100 rounded-full text-stone-400 transition-colors"
+                    className="p-2 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-full text-stone-400 transition-colors"
                   >
                     <ChevronLeft className="w-6 h-6" />
                   </button>
@@ -784,7 +849,7 @@ export default function App() {
                 </div>
 
                 <div className="flex-1 flex flex-col items-center justify-center">
-                  <div className="text-7xl sm:text-8xl font-display font-bold text-stone-800 flex items-center justify-center gap-4">
+                  <div className="text-7xl sm:text-8xl font-display font-bold text-stone-800 dark:text-stone-100 flex items-center justify-center gap-4">
                     {currentExercise.display ? (
                       <span className="text-5xl">{currentExercise.display}</span>
                     ) : (
@@ -796,14 +861,14 @@ export default function App() {
                         <span>{currentExercise.b}</span>
                       </>
                     )}
-                    <span className="text-stone-300">=</span>
+                    <span className="text-stone-300 dark:text-stone-600">=</span>
                   </div>
 
                   {currentExercise.isChallenge && (
                     <motion.div
                       initial={{ y: 20, opacity: 0 }}
                       animate={{ y: 0, opacity: 1 }}
-                      className="absolute top-12 right-8 bg-purple-100 text-purple-600 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1"
+                      className="absolute top-12 right-8 bg-purple-100 text-purple-600 dark:bg-purple-950/40 dark:text-purple-300 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1"
                     >
                       <Sparkles className="w-3 h-3" /> Challenge!
                     </motion.div>
@@ -823,9 +888,9 @@ export default function App() {
                       disabled={!!feedback}
                       className={`
                         w-full text-center text-5xl font-bold py-4 rounded-2xl border-4 outline-none transition-all
-                        ${feedback === 'correct' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 
-                          feedback === 'incorrect' ? 'border-red-500 bg-red-50 text-red-700' : 
-                          'border-stone-200 focus:border-emerald-400 bg-white'}
+                        ${feedback === 'correct' ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' :
+                          feedback === 'incorrect' ? 'border-red-500 bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300' :
+                          'border-stone-200 dark:border-stone-700 focus:border-emerald-400 bg-white dark:bg-stone-900'}
                       `}
                       placeholder="?"
                     />
@@ -852,9 +917,9 @@ export default function App() {
                     disabled={!!feedback || userAnswer === ''}
                     className={`
                       w-full py-4 rounded-2xl font-bold text-xl shadow-lg transition-all flex items-center justify-center gap-2
-                      ${!!feedback || userAnswer === '' 
-                        ? 'bg-stone-100 text-stone-300 cursor-not-allowed' 
-                        : 'bg-emerald-600 text-white hover:bg-emerald-700 active:scale-[0.98] shadow-emerald-100'}
+                      ${!!feedback || userAnswer === ''
+                        ? 'bg-stone-100 text-stone-300 dark:bg-stone-800 dark:text-stone-600 cursor-not-allowed'
+                        : 'bg-emerald-600 text-white hover:bg-emerald-700 active:scale-[0.98] shadow-emerald-100 dark:shadow-none'}
                     `}
                   >
                     Controleer
@@ -873,7 +938,7 @@ export default function App() {
               key="results"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="glass rounded-3xl p-8 text-center space-y-8"
+              className="glass rounded-3xl p-8 text-center space-y-8 w-full max-w-2xl lg:max-w-3xl mx-auto"
             >
               <div className="space-y-2">
                 <div className="relative w-24 h-24 mx-auto mb-4">
@@ -886,18 +951,18 @@ export default function App() {
                     <Sparkles className="w-8 h-8 text-yellow-400" />
                   </motion.div>
                 </div>
-                <h2 className="text-3xl font-bold text-stone-800">Goed gedaan, {settings.playerName}!</h2>
-                <p className="text-stone-500">{resultMessage}</p>
+                <h2 className="text-3xl font-bold text-stone-800 dark:text-stone-100">Goed gedaan, {settings.playerName}!</h2>
+                <p className="text-stone-500 dark:text-stone-400">{resultMessage}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-emerald-50 p-6 rounded-2xl">
-                  <div className="text-3xl font-bold text-emerald-600">{stats.correct}</div>
-                  <div className="text-sm text-emerald-600/60 font-bold uppercase tracking-wider">Goed</div>
+                <div className="bg-emerald-50 dark:bg-emerald-950/30 p-6 rounded-2xl">
+                  <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{stats.correct}</div>
+                  <div className="text-sm text-emerald-600/60 dark:text-emerald-400/70 font-bold uppercase tracking-wider">Goed</div>
                 </div>
-                <div className="bg-stone-50 p-6 rounded-2xl">
-                  <div className="text-3xl font-bold text-stone-600">{stats.total - stats.correct}</div>
-                  <div className="text-sm text-stone-600/60 font-bold uppercase tracking-wider">Fout</div>
+                <div className="bg-stone-50 dark:bg-stone-800/60 p-6 rounded-2xl">
+                  <div className="text-3xl font-bold text-stone-600 dark:text-stone-300">{stats.total - stats.correct}</div>
+                  <div className="text-sm text-stone-600/60 dark:text-stone-400/70 font-bold uppercase tracking-wider">Fout</div>
                 </div>
               </div>
 
@@ -906,7 +971,7 @@ export default function App() {
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ delay: 0.2 }}
-                  className={`p-6 rounded-3xl text-center relative overflow-hidden ${isNewRecord ? 'bg-amber-50 border-4 border-amber-200' : 'bg-blue-50 border-4 border-blue-100'}`}
+                  className={`p-6 rounded-3xl text-center relative overflow-hidden ${isNewRecord ? 'bg-amber-50 border-4 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800' : 'bg-blue-50 border-4 border-blue-100 dark:bg-blue-950/30 dark:border-blue-900'}`}
                 >
                   {isNewRecord && (
                     <div className="absolute -top-1 -right-1 bg-amber-400 text-white px-3 py-1 text-[10px] font-black uppercase tracking-tighter rotate-12 shadow-sm">
@@ -914,16 +979,16 @@ export default function App() {
                     </div>
                   )}
                   <div className="flex flex-col items-center gap-1">
-                    <p className={`text-xs font-bold uppercase tracking-widest ${isNewRecord ? 'text-amber-600' : 'text-blue-500'}`}>
+                    <p className={`text-xs font-bold uppercase tracking-widest ${isNewRecord ? 'text-amber-600 dark:text-amber-400' : 'text-blue-500 dark:text-blue-400'}`}>
                       {isNewRecord ? 'WAUW! NIEUW RECORD!' : 'Gemiddelde Snelheid'}
                     </p>
                     <div className="flex items-baseline gap-1">
-                      <span className={`text-5xl font-black ${isNewRecord ? 'text-amber-900' : 'text-blue-900'}`}>
+                      <span className={`text-5xl font-black ${isNewRecord ? 'text-amber-900 dark:text-amber-200' : 'text-blue-900 dark:text-blue-200'}`}>
                         {(sessionHistory[0]?.averageTimePerSum ? sessionHistory[0].averageTimePerSum / 1000 : 0).toFixed(2)}
                       </span>
-                      <span className={`text-xl font-bold ${isNewRecord ? 'text-amber-700' : 'text-blue-700'}`}>sec</span>
+                      <span className={`text-xl font-bold ${isNewRecord ? 'text-amber-700 dark:text-amber-300' : 'text-blue-700 dark:text-blue-300'}`}>sec</span>
                     </div>
-                    <p className={`text-xs mt-1 ${isNewRecord ? 'text-amber-600/60' : 'text-blue-600/60'} font-medium`}>per som</p>
+                    <p className={`text-xs mt-1 ${isNewRecord ? 'text-amber-600/60 dark:text-amber-400/70' : 'text-blue-600/60 dark:text-blue-400/70'} font-medium`}>per som</p>
                   </div>
                 </motion.div>
               )}
@@ -945,18 +1010,18 @@ export default function App() {
                 </button>
                 <button
                   onClick={() => setMode('settings')}
-                  className="w-full py-4 bg-stone-100 text-stone-600 rounded-2xl font-bold text-lg hover:bg-stone-200 transition-colors"
+                  className="w-full py-4 bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300 rounded-2xl font-bold text-lg hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors"
                 >
                   Instellingen aanpassen
                 </button>
               </div>
 
-              <div className="pt-6 border-t border-stone-100">
+              <div className="pt-6 border-t border-stone-100 dark:border-stone-800">
                 <h3 className="text-left font-bold text-stone-400 mb-4 uppercase text-xs tracking-widest">Overzicht</h3>
                 <div className="space-y-2">
                   {history.map((item, i) => (
                     <div key={i} className="flex items-center justify-between text-sm">
-                      <span className="text-stone-600">
+                      <span className="text-stone-600 dark:text-stone-300">
                         {item.exercise.a} {item.exercise.op === 'multiplication' ? '×' : '÷'} {item.exercise.b} = {item.exercise.result}
                       </span>
                       {item.correct ? (
@@ -986,43 +1051,43 @@ export default function App() {
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="bg-white rounded-3xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col shadow-2xl"
+              className="bg-white dark:bg-stone-900 rounded-3xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col shadow-2xl"
               onClick={e => e.stopPropagation()}
             >
-              <div className="p-6 border-b border-stone-100 flex items-center justify-between bg-stone-50">
+              <div className="p-6 border-b border-stone-100 dark:border-stone-800 flex items-center justify-between bg-stone-50 dark:bg-stone-800/60">
                 <div>
-                  <h3 className="text-xl font-bold text-stone-800">{selectedSession.playerName}</h3>
+                  <h3 className="text-xl font-bold text-stone-800 dark:text-stone-100">{selectedSession.playerName}</h3>
                   <p className="text-xs text-stone-400">
                     {new Date(selectedSession.timestamp).toLocaleString('nl-NL')}
                   </p>
                 </div>
-                <button 
+                <button
                   onClick={() => setSelectedSession(null)}
-                  className="p-2 hover:bg-stone-200 rounded-full transition-colors"
+                  className="p-2 hover:bg-stone-200 dark:hover:bg-stone-700 rounded-full transition-colors"
                 >
                   <X className="w-6 h-6 text-stone-400" />
                 </button>
               </div>
-              
+
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="bg-emerald-50 p-4 rounded-2xl text-center">
-                    <div className="text-xl font-bold text-emerald-600">{selectedSession.correct}</div>
-                    <div className="text-[10px] text-emerald-600/60 font-bold uppercase">Goed</div>
+                  <div className="bg-emerald-50 dark:bg-emerald-950/30 p-4 rounded-2xl text-center">
+                    <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{selectedSession.correct}</div>
+                    <div className="text-[10px] text-emerald-600/60 dark:text-emerald-400/70 font-bold uppercase">Goed</div>
                   </div>
-                  <div className="bg-red-50 p-4 rounded-2xl text-center">
-                    <div className="text-xl font-bold text-red-600">{selectedSession.total - selectedSession.correct}</div>
-                    <div className="text-[10px] text-red-600/60 font-bold uppercase">Fout</div>
+                  <div className="bg-red-50 dark:bg-red-950/30 p-4 rounded-2xl text-center">
+                    <div className="text-xl font-bold text-red-600 dark:text-red-400">{selectedSession.total - selectedSession.correct}</div>
+                    <div className="text-[10px] text-red-600/60 dark:text-red-400/70 font-bold uppercase">Fout</div>
                   </div>
-                  <div className="bg-blue-50 p-4 rounded-2xl text-center">
-                    <div className="text-xl font-bold text-blue-600">
+                  <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-2xl text-center">
+                    <div className="text-xl font-bold text-blue-600 dark:text-blue-400">
                       {selectedSession.trackTime !== false && selectedSession.averageTimePerSum !== undefined
-                        ? `${(selectedSession.averageTimePerSum / 1000).toFixed(1)}s` 
+                        ? `${(selectedSession.averageTimePerSum / 1000).toFixed(1)}s`
                         : '-'}
                     </div>
-                    <div className="text-[10px] text-blue-600/60 font-bold uppercase">
-                      {selectedSession.trackTime !== false && selectedSession.averageTimePerSum !== undefined 
-                        ? 'Snelheid' 
+                    <div className="text-[10px] text-blue-600/60 dark:text-blue-400/70 font-bold uppercase">
+                      {selectedSession.trackTime !== false && selectedSession.averageTimePerSum !== undefined
+                        ? 'Snelheid'
                         : 'Geen tijd'}
                     </div>
                   </div>
@@ -1032,10 +1097,10 @@ export default function App() {
                   <h4 className="text-xs font-bold text-stone-400 uppercase tracking-widest">Selectie</h4>
                   <div className="flex flex-wrap gap-2">
                     {selectedSession.multiplicationTables.map(t => (
-                      <span key={`m-${t}`} className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold">× {t}</span>
+                      <span key={`m-${t}`} className="px-2 py-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 rounded-lg text-xs font-bold">× {t}</span>
                     ))}
                     {selectedSession.divisionTables.map(t => (
-                      <span key={`d-${t}`} className="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs font-bold">÷ {t}</span>
+                      <span key={`d-${t}`} className="px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded-lg text-xs font-bold">÷ {t}</span>
                     ))}
                   </div>
                 </div>
@@ -1044,8 +1109,8 @@ export default function App() {
                   <h4 className="text-xs font-bold text-stone-400 uppercase tracking-widest">Sommen</h4>
                   <div className="space-y-2">
                     {selectedSession.history.map((item, i) => (
-                      <div key={i} className="flex items-center justify-between py-2 border-b border-stone-50 last:border-0">
-                        <span className="text-stone-600 font-medium">
+                      <div key={i} className="flex items-center justify-between py-2 border-b border-stone-50 dark:border-stone-800 last:border-0">
+                        <span className="text-stone-600 dark:text-stone-300 font-medium">
                           {item.exercise.a} {item.exercise.op === 'multiplication' ? '×' : '÷'} {item.exercise.b} = {item.exercise.result}
                         </span>
                         {item.correct ? (
@@ -1076,22 +1141,22 @@ export default function App() {
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-6 space-y-4 text-center"
+              className="bg-white dark:bg-stone-900 rounded-3xl w-full max-w-sm shadow-2xl p-6 space-y-4 text-center"
               onClick={e => e.stopPropagation()}
             >
-              <div className="mx-auto w-12 h-12 bg-red-100 text-red-500 rounded-2xl flex items-center justify-center">
+              <div className="mx-auto w-12 h-12 bg-red-100 text-red-500 dark:bg-red-950/40 dark:text-red-400 rounded-2xl flex items-center justify-center">
                 <Trash2 className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-stone-800">Geschiedenis wissen?</h3>
-                <p className="text-sm text-stone-500 mt-1">
+                <h3 className="text-lg font-bold text-stone-800 dark:text-stone-100">Geschiedenis wissen?</h3>
+                <p className="text-sm text-stone-500 dark:text-stone-400 mt-1">
                   Dit verwijdert alle opgeslagen resultaten. Dit kan niet ongedaan gemaakt worden.
                 </p>
               </div>
               <div className="flex gap-3 pt-2">
                 <button
                   onClick={() => setShowClearHistoryModal(false)}
-                  className="flex-1 py-3 bg-stone-100 text-stone-600 rounded-xl font-bold hover:bg-stone-200 transition-colors"
+                  className="flex-1 py-3 bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300 rounded-xl font-bold hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors"
                 >
                   Annuleren
                 </button>
@@ -1110,7 +1175,6 @@ export default function App() {
       {!isPracticing && (
         <footer className="mt-8 text-center text-stone-400 text-xs space-y-1">
           <p>Gemaakt voor kleine kampioenen 🌟</p>
-          <p>Deze app is met behulp van AI gemaakt door Glenn Evens.</p>
           <p className="opacity-50 pt-2">v{APP_VERSION}</p>
         </footer>
       )}
