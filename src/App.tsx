@@ -22,11 +22,15 @@ import {
   X,
   Info,
   Trash2,
-  Timer
+  Timer,
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 import { Exercise, Operation, UserSettings, MasteryData, SessionResult } from './types';
 
 const TABLES = Array.from({ length: 11 }, (_, i) => i);
+const APP_VERSION = __APP_VERSION__;
+const VERSION_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minuten
 
 export default function App() {
   const [mode, setMode] = useState<'settings' | 'practice' | 'results'>('settings');
@@ -73,6 +77,7 @@ export default function App() {
   const [selectedSession, setSelectedSession] = useState<SessionResult | null>(null);
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
   const [isNewRecord, setIsNewRecord] = useState(false);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
   
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -255,6 +260,39 @@ export default function App() {
     return () => window.removeEventListener('click', handleGlobalClick);
   }, [mode, feedback]);
 
+  // Check periodically whether a newer version is live on GitHub Pages
+  useEffect(() => {
+    let cancelled = false;
+
+    const checkForUpdate = async () => {
+      try {
+        const baseUrl = import.meta.env.BASE_URL || '/';
+        const url = `${baseUrl}version.json?t=${Date.now()}`;
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && data.version && data.version !== APP_VERSION) {
+          setUpdateAvailable(true);
+        }
+      } catch (e) {
+        // Offline of netwerkfout: stil negeren, we proberen het later opnieuw
+      }
+    };
+
+    checkForUpdate();
+    const interval = setInterval(checkForUpdate, VERSION_CHECK_INTERVAL);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') checkForUpdate();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, []);
+
   useEffect(() => {
     localStorage.setItem('tafel-settings', JSON.stringify(settings));
   }, [settings]);
@@ -276,6 +314,13 @@ export default function App() {
   }, [totalPossible, settings.exerciseCount]);
 
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [validationMessage, setValidationMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!validationMessage) return;
+    const timer = setTimeout(() => setValidationMessage(null), 3000);
+    return () => clearTimeout(timer);
+  }, [validationMessage]);
 
   const clearHistory = () => {
     if (showClearConfirm) {
@@ -301,13 +346,14 @@ export default function App() {
 
   const startPractice = () => {
     if (!settings.playerName.trim()) {
-      alert('Vul eerst je naam in!');
+      setValidationMessage('Vul eerst je naam in!');
       return;
     }
     if (settings.multiplicationTables.length === 0 && settings.divisionTables.length === 0) {
-      alert('Kies eerst minstens één tafel om te oefenen!');
+      setValidationMessage('Kies eerst minstens één tafel om te oefenen!');
       return;
     }
+    setValidationMessage(null);
 
     // Generate pool
     const pool: Exercise[] = [];
@@ -392,6 +438,28 @@ export default function App() {
         <p className="text-stone-500">Word de meester van de tafels!</p>
       </header>
 
+      <AnimatePresence>
+        {updateAvailable && (
+          <motion.div
+            initial={{ opacity: 0, y: -10, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mb-6 bg-blue-50 border border-blue-100 text-blue-700 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 overflow-hidden"
+          >
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <RefreshCw className="w-4 h-4 shrink-0" />
+              Nieuwe versie beschikbaar!
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors shrink-0"
+            >
+              Vernieuwen
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <main className="flex-1 flex flex-col">
         <AnimatePresence mode="wait">
           {mode === 'settings' && (
@@ -448,14 +516,12 @@ export default function App() {
                       <Divide className="w-4 h-4" /> Delen (÷)
                     </h3>
                     <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                      {TABLES.map(n => (
+                      {TABLES.filter(n => n !== 0).map(n => (
                         <button
                           key={`div-${n}`}
-                          disabled={n === 0}
                           onClick={() => toggleTable(n, 'division')}
                           className={`
                             h-12 rounded-xl font-bold transition-all duration-200
-                            ${n === 0 ? 'opacity-20 cursor-not-allowed' : ''}
                             ${settings.divisionTables.includes(n)
                               ? 'bg-blue-500 text-white shadow-lg shadow-blue-200 scale-105'
                               : 'bg-stone-100 text-stone-400 hover:bg-stone-200'}
@@ -519,10 +585,10 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t border-stone-100 flex items-center justify-between">
+                  <div className="flex items-center justify-between bg-orange-50 border border-orange-100 rounded-2xl px-4 py-3">
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-2">
-                        <Timer className="w-4 h-4 text-stone-500" />
+                        <Timer className="w-4 h-4 text-orange-500" />
                         <span className="font-bold text-sm text-stone-700">Tijd bijhouden</span>
                       </div>
                       <p className="text-xs text-stone-400">
@@ -553,13 +619,26 @@ export default function App() {
                 </div>
               </div>
 
+              <AnimatePresence>
+                {validationMessage && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10, height: 0 }}
+                    animate={{ opacity: 1, y: 0, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="bg-red-50 border border-red-100 text-red-600 rounded-2xl px-4 py-3 flex items-center gap-2 text-sm font-semibold overflow-hidden"
+                  >
+                    <AlertCircle className="w-5 h-5 shrink-0" />
+                    {validationMessage}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               <button
                 onClick={startPractice}
-                disabled={totalPossible === 0}
                 className={`
                   w-full py-4 text-white rounded-2xl font-bold text-xl shadow-xl transition-all flex items-center justify-center gap-2 group
-                  ${totalPossible === 0 
-                    ? 'bg-stone-300 cursor-not-allowed shadow-none' 
+                  ${totalPossible === 0
+                    ? 'bg-stone-300 shadow-none'
                     : 'bg-emerald-600 shadow-emerald-100 hover:bg-emerald-700'}
                 `}
               >
@@ -951,7 +1030,7 @@ export default function App() {
       <footer className="mt-8 text-center text-stone-400 text-xs space-y-1">
         <p>Gemaakt voor kleine kampioenen 🌟</p>
         <p>Deze app is met behulp van AI gemaakt door Glenn Evens.</p>
-        <p className="opacity-50 pt-2">v1.10.0</p>
+        <p className="opacity-50 pt-2">v{APP_VERSION}</p>
       </footer>
     </div>
   );
