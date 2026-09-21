@@ -624,7 +624,7 @@ export default function App() {
                 </div>
 
                 <div className="pt-6 border-t border-stone-100 dark:border-stone-800 space-y-6">
-                  {settings.personalBest && (
+                  {Boolean(settings.personalBest) && (
                     <motion.div 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
