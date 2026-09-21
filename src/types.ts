@@ -15,6 +15,7 @@ export interface UserSettings {
   divisionTables: number[];
   exerciseCount: 10 | 20 | 50 | 'all';
   personalBest?: number; // Lowest average time per sum in ms
+  trackTime?: boolean; // Whether to track time and enforce countdown timer
 }
 
 export interface SessionResult {
@@ -25,6 +26,7 @@ export interface SessionResult {
   timestamp: number;
   duration?: number; // Total time in ms
   averageTimePerSum?: number; // Average time in ms
+  trackTime?: boolean; // Whether time tracking was active for this session
   multiplicationTables: number[];
   divisionTables: number[];
   history: { exercise: Exercise; correct: boolean }[];

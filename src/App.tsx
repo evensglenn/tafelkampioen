@@ -21,7 +21,8 @@ import {
   History,
   X,
   Info,
-  Trash2
+  Trash2,
+  Timer
 } from 'lucide-react';
 import { Exercise, Operation, UserSettings, MasteryData, SessionResult } from './types';
 
@@ -31,7 +32,15 @@ export default function App() {
   const [mode, setMode] = useState<'settings' | 'practice' | 'results'>('settings');
   const [settings, setSettings] = useState<UserSettings>(() => {
     const saved = localStorage.getItem('tafel-settings');
-    return saved ? JSON.parse(saved) : { playerName: '', multiplicationTables: [], divisionTables: [], exerciseCount: 10 };
+    const parsed = saved ? JSON.parse(saved) : {};
+    return {
+      playerName: '',
+      multiplicationTables: [],
+      divisionTables: [],
+      exerciseCount: 10,
+      trackTime: true,
+      ...parsed
+    };
   });
   const [mastery, setMastery] = useState<MasteryData>(() => {
     const saved = localStorage.getItem('tafel-mastery');
@@ -133,13 +142,14 @@ export default function App() {
     setTimeout(() => {
       if (nextStats.total >= activeTotal) {
         // Save to session history
+        const isTimeTracked = settings.trackTime !== false;
         const now = Date.now();
-        const duration = sessionStartTime ? now - sessionStartTime : 0;
-        const averageTimePerSum = duration / nextStats.total;
+        const duration = isTimeTracked && sessionStartTime ? now - sessionStartTime : undefined;
+        const averageTimePerSum = isTimeTracked && duration !== undefined ? duration / nextStats.total : undefined;
         const allCorrect = nextStats.correct === nextStats.total;
 
         let recordBeaten = false;
-        if (allCorrect) {
+        if (isTimeTracked && allCorrect && averageTimePerSum !== undefined) {
           if (!settings.personalBest || averageTimePerSum < settings.personalBest) {
             setSettings(prev => ({ ...prev, personalBest: averageTimePerSum }));
             recordBeaten = true;
@@ -155,6 +165,7 @@ export default function App() {
           timestamp: now,
           duration,
           averageTimePerSum,
+          trackTime: isTimeTracked,
           multiplicationTables: [...settings.multiplicationTables],
           divisionTables: [...settings.divisionTables],
           history: [...history, { exercise: currentExercise, correct: isCorrect }]
@@ -180,10 +191,27 @@ export default function App() {
         setCurrentExercise(null); // Clear current to trigger useEffect
         setUserAnswer('');
         setFeedback(null);
-        startTimer();
+        if (settings.trackTime !== false) {
+          startTimer();
+        }
       }
     }, 500);
-  }, [currentExercise, feedback, stats, activeTotal, startTimer, stopTimer, settings.multiplicationTables, settings.playerName, history, playSuccessSound]);
+  }, [
+    currentExercise, 
+    feedback, 
+    stats, 
+    activeTotal, 
+    startTimer, 
+    stopTimer, 
+    settings.multiplicationTables, 
+    settings.divisionTables,
+    settings.playerName, 
+    settings.trackTime,
+    settings.personalBest,
+    sessionStartTime,
+    history, 
+    playSuccessSound
+  ]);
 
   useEffect(() => {
     handleAnswerRef.current = handleAnswer;
@@ -312,9 +340,14 @@ export default function App() {
     setMode('practice');
     setUserAnswer('');
     setFeedback(null);
-    setSessionStartTime(Date.now());
     setIsNewRecord(false);
-    startTimer();
+    if (settings.trackTime !== false) {
+      setSessionStartTime(Date.now());
+      startTimer();
+    } else {
+      setSessionStartTime(null);
+      stopTimer();
+    }
   };
 
   const retryMistakes = () => {
@@ -336,7 +369,11 @@ export default function App() {
     setMode('practice');
     setUserAnswer('');
     setFeedback(null);
-    startTimer();
+    if (settings.trackTime !== false) {
+      startTimer();
+    } else {
+      stopTimer();
+    }
   };
 
   return (
@@ -447,6 +484,11 @@ export default function App() {
                           <p className="text-amber-900 font-bold">{(settings.personalBest / 1000).toFixed(2)}s <span className="text-xs font-normal opacity-60">per som</span></p>
                         </div>
                       </div>
+                      {settings.trackTime === false && (
+                        <span className="text-[10px] bg-amber-100 text-amber-800 px-2.5 py-1 rounded-lg font-semibold">
+                          Tijd uit
+                        </span>
+                      )}
                     </motion.div>
                   )}
 
@@ -475,6 +517,38 @@ export default function App() {
                         );
                       })}
                     </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-stone-100 flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <Timer className="w-4 h-4 text-stone-500" />
+                        <span className="font-bold text-sm text-stone-700">Tijd bijhouden</span>
+                      </div>
+                      <p className="text-xs text-stone-400">
+                        {settings.trackTime !== false
+                          ? 'Snelheid meten en tijdslimiet (15 sec per som)'
+                          : 'Rustig oefenen zonder tijdslimiet'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={settings.trackTime !== false}
+                      onClick={() => setSettings(prev => ({ ...prev, trackTime: !(prev.trackTime !== false) }))}
+                      className={`
+                        relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none
+                        ${settings.trackTime !== false ? 'bg-emerald-500' : 'bg-stone-200'}
+                      `}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={`
+                          pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out
+                          ${settings.trackTime !== false ? 'translate-x-5' : 'translate-x-0'}
+                        `}
+                      />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -522,6 +596,12 @@ export default function App() {
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-stone-700">{result.playerName}</span>
                           <div className="flex items-center gap-2">
+                            {result.trackTime !== false && result.averageTimePerSum !== undefined && (
+                              <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                <Timer className="w-3 h-3" />
+                                {(result.averageTimePerSum / 1000).toFixed(1)}s
+                              </span>
+                            )}
                             <span className="font-mono font-bold text-emerald-600">
                               {result.correct} / {result.total}
                             </span>
@@ -563,14 +643,16 @@ export default function App() {
                 </div>
                 
                 {/* Timer bar */}
-                <div className="absolute top-2 left-0 w-full h-1.5 bg-stone-50 overflow-hidden">
-                  <motion.div 
-                    className={`h-full transition-colors duration-300 ${timeLeft < 3 ? 'bg-red-500' : 'bg-orange-400'}`}
-                    initial={{ width: '100%' }}
-                    animate={{ width: `${(timeLeft / 15) * 100}%` }}
-                    transition={{ duration: 0.05, ease: 'linear' }}
-                  />
-                </div>
+                {settings.trackTime !== false && (
+                  <div className="absolute top-2 left-0 w-full h-1.5 bg-stone-50 overflow-hidden">
+                    <motion.div 
+                      className={`h-full transition-colors duration-300 ${timeLeft < 3 ? 'bg-red-500' : 'bg-orange-400'}`}
+                      initial={{ width: '100%' }}
+                      animate={{ width: `${(timeLeft / 15) * 100}%` }}
+                      transition={{ duration: 0.05, ease: 'linear' }}
+                    />
+                  </div>
+                )}
 
                 <div className="flex justify-between items-center mb-8">
                   <button 
@@ -704,7 +786,7 @@ export default function App() {
                 </div>
               </div>
 
-              {stats.correct === stats.total && (
+              {stats.correct === stats.total && settings.trackTime !== false && sessionHistory[0]?.averageTimePerSum !== undefined && (
                 <motion.div 
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
@@ -819,9 +901,15 @@ export default function App() {
                   </div>
                   <div className="bg-blue-50 p-4 rounded-2xl text-center">
                     <div className="text-xl font-bold text-blue-600">
-                      {selectedSession.averageTimePerSum ? (selectedSession.averageTimePerSum / 1000).toFixed(1) : '-'}s
+                      {selectedSession.trackTime !== false && selectedSession.averageTimePerSum !== undefined
+                        ? `${(selectedSession.averageTimePerSum / 1000).toFixed(1)}s` 
+                        : '-'}
                     </div>
-                    <div className="text-[10px] text-blue-600/60 font-bold uppercase">Snelheid</div>
+                    <div className="text-[10px] text-blue-600/60 font-bold uppercase">
+                      {selectedSession.trackTime !== false && selectedSession.averageTimePerSum !== undefined 
+                        ? 'Snelheid' 
+                        : 'Geen tijd'}
+                    </div>
                   </div>
                 </div>
 
@@ -863,7 +951,7 @@ export default function App() {
       <footer className="mt-8 text-center text-stone-400 text-xs space-y-1">
         <p>Gemaakt voor kleine kampioenen 🌟</p>
         <p>Deze app is met behulp van AI gemaakt door Glenn Evens.</p>
-        <p className="opacity-50 pt-2">v1.9.2</p>
+        <p className="opacity-50 pt-2">v1.10.0</p>
       </footer>
     </div>
   );
