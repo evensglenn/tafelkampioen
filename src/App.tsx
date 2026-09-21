@@ -78,6 +78,7 @@ export default function App() {
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
   const [isNewRecord, setIsNewRecord] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [isReloading, setIsReloading] = useState(false);
   
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -313,7 +314,7 @@ export default function App() {
     }
   }, [totalPossible, settings.exerciseCount]);
 
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showClearHistoryModal, setShowClearHistoryModal] = useState(false);
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -323,14 +324,8 @@ export default function App() {
   }, [validationMessage]);
 
   const clearHistory = () => {
-    if (showClearConfirm) {
-      setSessionHistory([]);
-      setShowClearConfirm(false);
-    } else {
-      setShowClearConfirm(true);
-      // Reset after 3 seconds if not clicked
-      setTimeout(() => setShowClearConfirm(false), 3000);
-    }
+    setSessionHistory([]);
+    setShowClearHistoryModal(false);
   };
 
   const toggleTable = (num: number, op: Operation) => {
@@ -422,20 +417,22 @@ export default function App() {
     }
   };
 
+  const isPracticing = mode === 'practice';
+
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8 min-h-screen flex flex-col font-sans">
-      <header className="mb-8 text-center">
-        <motion.div 
+    <div className={`max-w-2xl mx-auto px-4 min-h-screen flex flex-col font-sans ${isPracticing ? 'py-4' : 'py-8'}`}>
+      <header className={`text-center ${isPracticing ? 'mb-2' : 'mb-8'}`}>
+        <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
-          className="flex items-center justify-center gap-3 mb-2"
+          className={`flex items-center justify-center gap-2 ${isPracticing ? '' : 'gap-3 mb-2'}`}
         >
-          <Brain className="w-10 h-10 text-purple-500" />
-          <h1 className="text-4xl font-bold text-emerald-600 font-display">
+          <Brain className={`text-purple-500 transition-all ${isPracticing ? 'w-6 h-6' : 'w-10 h-10'}`} />
+          <h1 className={`font-bold text-emerald-600 font-display transition-all ${isPracticing ? 'text-xl' : 'text-4xl'}`}>
             TafelKampioen
           </h1>
         </motion.div>
-        <p className="text-stone-500">Word de meester van de tafels!</p>
+        {!isPracticing && <p className="text-stone-500">Word de meester van de tafels!</p>}
       </header>
 
       <AnimatePresence>
@@ -447,14 +444,22 @@ export default function App() {
             className="mb-6 bg-blue-50 border border-blue-100 text-blue-700 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 overflow-hidden"
           >
             <div className="flex items-center gap-2 text-sm font-semibold">
-              <RefreshCw className="w-4 h-4 shrink-0" />
+              <RefreshCw className={`w-4 h-4 shrink-0 ${isReloading ? 'animate-spin' : ''}`} />
               Nieuwe versie beschikbaar!
             </div>
             <button
-              onClick={() => window.location.reload()}
-              className="bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors shrink-0"
+              onClick={() => {
+                setIsReloading(true);
+                // Cache-busting query zodat de browser echt een verse pagina ophaalt
+                // in plaats van de oude versie uit cache te herladen.
+                const url = new URL(window.location.href);
+                url.searchParams.set('_v', Date.now().toString());
+                window.location.href = url.toString();
+              }}
+              disabled={isReloading}
+              className="bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors shrink-0 disabled:opacity-60 disabled:cursor-wait"
             >
-              Vernieuwen
+              {isReloading ? 'Bezig...' : 'Vernieuwen'}
             </button>
           </motion.div>
         )}
@@ -652,17 +657,12 @@ export default function App() {
                     <h3 className="text-sm font-bold uppercase tracking-wider text-stone-400 flex items-center gap-2">
                       <History className="w-4 h-4" /> Laatste resultaten
                     </h3>
-                    <button 
-                      onClick={clearHistory}
-                      className={`
-                        flex items-center gap-1 px-2 py-1 rounded-lg transition-all text-xs font-bold
-                        ${showClearConfirm 
-                          ? 'bg-red-100 text-red-600' 
-                          : 'text-stone-300 hover:text-red-400'}
-                      `}
+                    <button
+                      onClick={() => setShowClearHistoryModal(true)}
+                      className="flex items-center gap-1 px-2 py-1 rounded-lg transition-all text-xs font-bold text-stone-300 hover:text-red-400 hover:bg-red-50"
                       title="Historiek wissen"
                     >
-                      {showClearConfirm ? 'Zeker?' : <Trash2 className="w-4 h-4" />}
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                   <div className="space-y-2">
@@ -710,9 +710,9 @@ export default function App() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 1.05 }}
-              className="flex-1 flex flex-col items-center justify-center space-y-8"
+              className="flex-1 flex flex-col items-center w-full"
             >
-              <div className="w-full max-w-md glass rounded-3xl p-8 text-center relative overflow-hidden">
+              <div className="w-full max-w-md flex-1 flex flex-col glass rounded-3xl p-8 text-center relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-2 bg-stone-100">
                   <motion.div 
                     className="h-full bg-emerald-500"
@@ -749,30 +749,32 @@ export default function App() {
                   <div className="w-10" />
                 </div>
 
-                <div className="text-7xl font-display font-bold text-stone-800 mb-12 flex items-center justify-center gap-4">
-                  {currentExercise.display ? (
-                    <span className="text-5xl">{currentExercise.display}</span>
-                  ) : (
-                    <>
-                      <span>{currentExercise.a}</span>
-                      <span className="text-emerald-500 text-5xl">
-                        {currentExercise.op === 'multiplication' ? '×' : '÷'}
-                      </span>
-                      <span>{currentExercise.b}</span>
-                    </>
-                  )}
-                  <span className="text-stone-300">=</span>
-                </div>
+                <div className="flex-1 flex flex-col items-center justify-center">
+                  <div className="text-7xl sm:text-8xl font-display font-bold text-stone-800 flex items-center justify-center gap-4">
+                    {currentExercise.display ? (
+                      <span className="text-5xl">{currentExercise.display}</span>
+                    ) : (
+                      <>
+                        <span>{currentExercise.a}</span>
+                        <span className="text-emerald-500 text-5xl">
+                          {currentExercise.op === 'multiplication' ? '×' : '÷'}
+                        </span>
+                        <span>{currentExercise.b}</span>
+                      </>
+                    )}
+                    <span className="text-stone-300">=</span>
+                  </div>
 
-                {currentExercise.isChallenge && (
-                  <motion.div
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    className="absolute top-12 right-8 bg-purple-100 text-purple-600 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1"
-                  >
-                    <Sparkles className="w-3 h-3" /> Challenge!
-                  </motion.div>
-                )}
+                  {currentExercise.isChallenge && (
+                    <motion.div
+                      initial={{ y: 20, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      className="absolute top-12 right-8 bg-purple-100 text-purple-600 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1"
+                    >
+                      <Sparkles className="w-3 h-3" /> Challenge!
+                    </motion.div>
+                  )}
+                </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="relative">
@@ -1027,11 +1029,57 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      <footer className="mt-8 text-center text-stone-400 text-xs space-y-1">
-        <p>Gemaakt voor kleine kampioenen 🌟</p>
-        <p>Deze app is met behulp van AI gemaakt door Glenn Evens.</p>
-        <p className="opacity-50 pt-2">v{APP_VERSION}</p>
-      </footer>
+      <AnimatePresence>
+        {showClearHistoryModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            onClick={() => setShowClearHistoryModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-6 space-y-4 text-center"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="mx-auto w-12 h-12 bg-red-100 text-red-500 rounded-2xl flex items-center justify-center">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-stone-800">Geschiedenis wissen?</h3>
+                <p className="text-sm text-stone-500 mt-1">
+                  Dit verwijdert alle opgeslagen resultaten. Dit kan niet ongedaan gemaakt worden.
+                </p>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowClearHistoryModal(false)}
+                  className="flex-1 py-3 bg-stone-100 text-stone-600 rounded-xl font-bold hover:bg-stone-200 transition-colors"
+                >
+                  Annuleren
+                </button>
+                <button
+                  onClick={clearHistory}
+                  className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-colors"
+                >
+                  Wissen
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {!isPracticing && (
+        <footer className="mt-8 text-center text-stone-400 text-xs space-y-1">
+          <p>Gemaakt voor kleine kampioenen 🌟</p>
+          <p>Deze app is met behulp van AI gemaakt door Glenn Evens.</p>
+          <p className="opacity-50 pt-2">v{APP_VERSION}</p>
+        </footer>
+      )}
     </div>
   );
 }
