@@ -29,7 +29,7 @@ import {
   Moon,
   Monitor
 } from 'lucide-react';
-import { Exercise, Operation, UserSettings, SessionResult, ThemePreference } from './types';
+import { Exercise, Operation, UserSettings, SessionResult, HistoryItem, ThemePreference } from './types';
 
 const TABLES = Array.from({ length: 11 }, (_, i) => i);
 const APP_VERSION = __APP_VERSION__;
@@ -102,7 +102,7 @@ export default function App() {
   const [userAnswer, setUserAnswer] = useState('');
   const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
   const [stats, setStats] = useState({ correct: 0, total: 0 });
-  const [history, setHistory] = useState<{ exercise: Exercise; correct: boolean }[]>([]);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
   const [activeTotal, setActiveTotal] = useState(0);
   const [timeLeft, setTimeLeft] = useState(15);
   const [selectedSession, setSelectedSession] = useState<SessionResult | null>(null);
@@ -156,6 +156,12 @@ export default function App() {
     stopTimer();
     const isCorrect = answer !== null && parseInt(answer) === currentExercise.result;
     setFeedback(isCorrect ? 'correct' : 'incorrect');
+    const parsedAnswer = answer !== null ? parseInt(answer) : NaN;
+    const historyItem: HistoryItem = {
+      exercise: currentExercise,
+      correct: isCorrect,
+      givenAnswer: Number.isNaN(parsedAnswer) ? null : parsedAnswer
+    };
 
     const nextStats = {
       correct: stats.correct + (isCorrect ? 1 : 0),
@@ -163,7 +169,7 @@ export default function App() {
     };
     
     setStats(nextStats);
-    setHistory(prev => [...prev, { exercise: currentExercise, correct: isCorrect }]);
+    setHistory(prev => [...prev, historyItem]);
 
     setTimeout(() => {
       if (nextStats.total >= activeTotal) {
@@ -202,7 +208,7 @@ export default function App() {
           trackTime: isTimeTracked,
           multiplicationTables: [...settings.multiplicationTables],
           divisionTables: [...settings.divisionTables],
-          history: [...history, { exercise: currentExercise, correct: isCorrect }]
+          history: [...history, historyItem]
         };
         setSessionHistory(prev => [result, ...prev].slice(0, 5)); // Keep last 5
         
@@ -1010,9 +1016,16 @@ export default function App() {
                         {item.exercise.a} {item.exercise.op === 'multiplication' ? '×' : '÷'} {item.exercise.b} = {item.exercise.result}
                       </span>
                       {item.correct ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                       ) : (
-                        <XCircle className="w-4 h-4 text-red-500" />
+                        <span className="flex items-center gap-2">
+                          {item.givenAnswer !== undefined && (
+                            <span className="text-xs font-bold text-red-600 dark:text-red-400">
+                              {item.givenAnswer === null ? 'geen antwoord' : <>jouw antwoord: <span className="line-through">{item.givenAnswer}</span></>}
+                            </span>
+                          )}
+                          <XCircle className="w-4 h-4 text-red-500 shrink-0" />
+                        </span>
                       )}
                     </div>
                   ))}
@@ -1099,9 +1112,16 @@ export default function App() {
                           {item.exercise.a} {item.exercise.op === 'multiplication' ? '×' : '÷'} {item.exercise.b} = {item.exercise.result}
                         </span>
                         {item.correct ? (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                         ) : (
-                          <XCircle className="w-4 h-4 text-red-500" />
+                          <span className="flex items-center gap-2">
+                            {item.givenAnswer !== undefined && (
+                              <span className="text-xs font-bold text-red-600 dark:text-red-400">
+                                {item.givenAnswer === null ? 'geen antwoord' : <>jouw antwoord: <span className="line-through">{item.givenAnswer}</span></>}
+                              </span>
+                            )}
+                            <XCircle className="w-4 h-4 text-red-500 shrink-0" />
+                          </span>
                         )}
                       </div>
                     ))}
