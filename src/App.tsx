@@ -12,9 +12,7 @@ import {
   CheckCircle2, 
   XCircle, 
   RotateCcw, 
-  Brain,
   ChevronLeft,
-  Calculator,
   Sparkles,
   User,
   History,
@@ -32,6 +30,7 @@ import { Exercise, Operation, UserSettings, SessionResult, HistoryItem, ThemePre
 
 const TABLES = Array.from({ length: 11 }, (_, i) => i);
 const APP_VERSION = __APP_VERSION__;
+const LOGO_URL = `${import.meta.env.BASE_URL}favicon.svg`;
 const VERSION_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minuten
 
 const THEME_OPTIONS: { value: ThemePreference; label: string; icon: typeof Sun }[] = [
@@ -516,7 +515,7 @@ export default function App() {
           animate={{ scale: 1 }}
           className={`flex items-center justify-center gap-2 ${isPracticing ? '' : 'gap-3 mb-2'}`}
         >
-          <Brain className={`text-purple-500 transition-all ${isPracticing ? 'w-6 h-6' : 'w-10 h-10'}`} />
+          <img src={LOGO_URL} alt="" className={`transition-all ${isPracticing ? 'w-7 h-7' : 'w-11 h-11'}`} />
           <h1 className={`font-bold text-emerald-600 font-display transition-all ${isPracticing ? 'text-xl' : 'text-4xl'}`}>
             TafelKampioen
           </h1>
@@ -585,7 +584,7 @@ export default function App() {
 
                   <div>
                     <h3 className="text-sm font-bold uppercase tracking-wider text-stone-400 mb-3 flex items-center gap-2">
-                      <Calculator className="w-4 h-4" /> Vermenigvuldigen (×)
+                      <span className="w-4 h-4 flex items-center justify-center text-lg font-extrabold leading-none">×</span> Vermenigvuldigen
                     </h3>
                     <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-11 gap-2">
                       {TABLES.map(n => (
@@ -607,7 +606,7 @@ export default function App() {
 
                   <div>
                     <h3 className="text-sm font-bold uppercase tracking-wider text-stone-400 mb-3 flex items-center gap-2">
-                      <span className="w-4 h-4 flex items-center justify-center text-base leading-none">:</span> Delen (:)
+                      <span className="w-4 h-4 flex items-center justify-center text-lg font-extrabold leading-none">:</span> Delen
                     </h3>
                     <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-11 gap-2">
                       {TABLES.filter(n => n !== 0).map(n => (
@@ -932,7 +931,7 @@ export default function App() {
             >
               <div className="space-y-2">
                 <div className="relative w-24 h-24 mx-auto mb-4">
-                  <Brain className="w-full h-full text-purple-500" />
+                  <img src={LOGO_URL} alt="" className="w-full h-full" />
                   <motion.div
                     animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
                     transition={{ repeat: Infinity, duration: 2 }}
