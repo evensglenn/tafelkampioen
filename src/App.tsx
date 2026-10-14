@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useId } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
 import { 
@@ -14,6 +14,7 @@ import {
   RotateCcw, 
   ChevronLeft,
   Sparkles,
+  ThumbsUp,
   User,
   History,
   X,
@@ -63,6 +64,30 @@ const ENCOURAGE_MESSAGES = [
   'Je bent op de goede weg, blijf oefenen!',
   'Fouten maken hoort erbij — zo leer je het echt.',
 ];
+
+// Score vanaf waar een reeks als geslaagd telt (kroon en "goed bezig"-berichten)
+const GOOD_SCORE_RATIO = 0.7;
+
+// Dezelfde gouden kroon als in het logo
+function Crown({ className }: { className?: string }) {
+  const gradientId = useId();
+  return (
+    <svg viewBox="-86 -56 172 100" className={className} aria-hidden="true">
+      <defs>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#fde68a" />
+          <stop offset="1" stopColor="#f59e0b" />
+        </linearGradient>
+      </defs>
+      <g fill={`url(#${gradientId})`} stroke={`url(#${gradientId})`}>
+        <path d="M-62 40 L-72 -20 L-30 8 L0 -36 L30 8 L72 -20 L62 40 Z" strokeWidth="7" strokeLinejoin="round" />
+        <circle cx="-72" cy="-24" r="12" />
+        <circle cx="0" cy="-40" r="13" />
+        <circle cx="72" cy="-24" r="12" />
+      </g>
+    </svg>
+  );
+}
 
 export default function App() {
   const [mode, setMode] = useState<'settings' | 'practice' | 'results'>('settings');
@@ -190,7 +215,7 @@ export default function App() {
         const scoreRatio = nextStats.correct / nextStats.total;
         const messagePool = allCorrect
           ? PERFECT_SCORE_MESSAGES
-          : scoreRatio >= 0.7
+          : scoreRatio >= GOOD_SCORE_RATIO
             ? GOOD_SCORE_MESSAGES
             : ENCOURAGE_MESSAGES;
         setResultMessage(messagePool[Math.floor(Math.random() * messagePool.length)]);
@@ -930,16 +955,38 @@ export default function App() {
               className="glass rounded-3xl p-8 text-center space-y-8 w-full max-w-2xl lg:max-w-3xl mx-auto"
             >
               <div className="space-y-2">
-                <div className="relative w-24 h-24 mx-auto mb-4">
-                  <img src={LOGO_URL} alt="" className="w-full h-full" />
+                {stats.total > 0 && stats.correct / stats.total >= GOOD_SCORE_RATIO ? (
                   <motion.div
-                    animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
-                    transition={{ repeat: Infinity, duration: 2 }}
-                    className="absolute -top-2 -right-2"
+                    initial={{ scale: 0, rotate: -15 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ type: 'spring', stiffness: 260, damping: 14, delay: 0.15 }}
+                    className="relative w-32 mx-auto mb-4"
                   >
-                    <Sparkles className="w-8 h-8 text-yellow-400" />
+                    <Crown className="w-full h-auto drop-shadow-lg" />
+                    {stats.correct === stats.total && (
+                      <>
+                        <motion.div
+                          animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+                          transition={{ repeat: Infinity, duration: 2 }}
+                          className="absolute -top-4 -right-6"
+                        >
+                          <Sparkles className="w-8 h-8 text-yellow-400" />
+                        </motion.div>
+                        <motion.div
+                          animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+                          transition={{ repeat: Infinity, duration: 2, delay: 1 }}
+                          className="absolute -bottom-2 -left-6"
+                        >
+                          <Sparkles className="w-6 h-6 text-yellow-400" />
+                        </motion.div>
+                      </>
+                    )}
                   </motion.div>
-                </div>
+                ) : (
+                  <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center">
+                    <ThumbsUp className="w-12 h-12 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                )}
                 <h2 className="text-3xl font-bold text-stone-800 dark:text-stone-100">Goed gedaan, {settings.playerName}!</h2>
                 <p className="text-stone-500 dark:text-stone-400">{resultMessage}</p>
               </div>
@@ -1179,21 +1226,7 @@ export default function App() {
         <footer className="mt-8 text-center text-stone-400 text-xs space-y-1">
           <p className="flex items-center justify-center gap-1">
             Gemaakt voor kleine kampioenen
-            {/* Dezelfde kroon als in het logo */}
-            <svg viewBox="-86 -56 172 100" className="w-4 h-auto" aria-hidden="true">
-              <defs>
-                <linearGradient id="footer-crown-gold" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0" stopColor="#fde68a" />
-                  <stop offset="1" stopColor="#f59e0b" />
-                </linearGradient>
-              </defs>
-              <g fill="url(#footer-crown-gold)" stroke="url(#footer-crown-gold)">
-                <path d="M-62 40 L-72 -20 L-30 8 L0 -36 L30 8 L72 -20 L62 40 Z" strokeWidth="7" strokeLinejoin="round" />
-                <circle cx="-72" cy="-24" r="12" />
-                <circle cx="0" cy="-40" r="13" />
-                <circle cx="72" cy="-24" r="12" />
-              </g>
-            </svg>
+            <Crown className="w-4 h-auto" />
           </p>
           <p className="opacity-50 pt-2">v{APP_VERSION}</p>
         </footer>
