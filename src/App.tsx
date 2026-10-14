@@ -12,10 +12,7 @@ import {
   CheckCircle2, 
   XCircle, 
   RotateCcw, 
-  Brain,
   ChevronLeft,
-  Calculator,
-  Divide,
   Sparkles,
   User,
   History,
@@ -33,6 +30,7 @@ import { Exercise, Operation, UserSettings, SessionResult, HistoryItem, ThemePre
 
 const TABLES = Array.from({ length: 11 }, (_, i) => i);
 const APP_VERSION = __APP_VERSION__;
+const LOGO_URL = `${import.meta.env.BASE_URL}favicon.svg`;
 const VERSION_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minuten
 
 const THEME_OPTIONS: { value: ThemePreference; label: string; icon: typeof Sun }[] = [
@@ -517,8 +515,8 @@ export default function App() {
           animate={{ scale: 1 }}
           className={`flex items-center justify-center gap-2 ${isPracticing ? '' : 'gap-3 mb-2'}`}
         >
-          <Brain className={`text-purple-500 transition-all ${isPracticing ? 'w-6 h-6' : 'w-10 h-10'}`} />
-          <h1 className={`font-bold text-emerald-600 font-display transition-all ${isPracticing ? 'text-xl' : 'text-4xl'}`}>
+          <img src={LOGO_URL} alt="" className={`transition-all ${isPracticing ? 'w-7 h-7' : 'w-11 h-11'}`} />
+          <h1 className={`font-bold text-emerald-600 dark:text-emerald-400 font-display transition-all ${isPracticing ? 'text-xl' : 'text-4xl'}`}>
             TafelKampioen
           </h1>
         </motion.div>
@@ -586,7 +584,7 @@ export default function App() {
 
                   <div>
                     <h3 className="text-sm font-bold uppercase tracking-wider text-stone-400 mb-3 flex items-center gap-2">
-                      <Calculator className="w-4 h-4" /> Vermenigvuldigen (×)
+                      <span className="w-4 h-4 flex items-center justify-center text-lg font-extrabold leading-none">×</span> Vermenigvuldigen
                     </h3>
                     <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-11 gap-2">
                       {TABLES.map(n => (
@@ -608,7 +606,7 @@ export default function App() {
 
                   <div>
                     <h3 className="text-sm font-bold uppercase tracking-wider text-stone-400 mb-3 flex items-center gap-2">
-                      <Divide className="w-4 h-4" /> Delen (÷)
+                      <span className="w-4 h-4 flex items-center justify-center text-lg font-extrabold leading-none">:</span> Delen
                     </h3>
                     <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-11 gap-2">
                       {TABLES.filter(n => n !== 0).map(n => (
@@ -779,11 +777,11 @@ export default function App() {
                         </div>
                         <div className="text-[10px] text-stone-400 flex flex-wrap gap-1">
                           {(result.multiplicationTables?.length ?? 0) > 0 && (
-                            <span>×: {result.multiplicationTables.join(', ')}</span>
+                            <span>× {result.multiplicationTables.join(', ')}</span>
                           )}
                           {(result.multiplicationTables?.length ?? 0) > 0 && (result.divisionTables?.length ?? 0) > 0 && <span>|</span>}
                           {(result.divisionTables?.length ?? 0) > 0 && (
-                            <span>÷: {result.divisionTables.join(', ')}</span>
+                            <span>: {result.divisionTables.join(', ')}</span>
                           )}
                         </div>
                       </button>
@@ -847,7 +845,7 @@ export default function App() {
                       <>
                         <span>{currentExercise.a}</span>
                         <span className="text-emerald-500 text-5xl">
-                          {currentExercise.op === 'multiplication' ? '×' : '÷'}
+                          {currentExercise.op === 'multiplication' ? '×' : ':'}
                         </span>
                         <span>{currentExercise.b}</span>
                       </>
@@ -933,7 +931,7 @@ export default function App() {
             >
               <div className="space-y-2">
                 <div className="relative w-24 h-24 mx-auto mb-4">
-                  <Brain className="w-full h-full text-purple-500" />
+                  <img src={LOGO_URL} alt="" className="w-full h-full" />
                   <motion.div
                     animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
                     transition={{ repeat: Infinity, duration: 2 }}
@@ -1013,7 +1011,7 @@ export default function App() {
                   {history.map((item, i) => (
                     <div key={i} className="flex items-center justify-between text-sm">
                       <span className="text-stone-600 dark:text-stone-300">
-                        {item.exercise.a} {item.exercise.op === 'multiplication' ? '×' : '÷'} {item.exercise.b} = {item.exercise.result}
+                        {item.exercise.a} {item.exercise.op === 'multiplication' ? '×' : ':'} {item.exercise.b} = {item.exercise.result}
                       </span>
                       {item.correct ? (
                         <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
@@ -1098,7 +1096,7 @@ export default function App() {
                       <span key={`m-${t}`} className="px-2 py-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 rounded-lg text-xs font-bold">× {t}</span>
                     ))}
                     {selectedSession.divisionTables.map(t => (
-                      <span key={`d-${t}`} className="px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded-lg text-xs font-bold">÷ {t}</span>
+                      <span key={`d-${t}`} className="px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded-lg text-xs font-bold">: {t}</span>
                     ))}
                   </div>
                 </div>
@@ -1109,7 +1107,7 @@ export default function App() {
                     {selectedSession.history.map((item, i) => (
                       <div key={i} className="flex items-center justify-between py-2 border-b border-stone-50 dark:border-stone-800 last:border-0">
                         <span className="text-stone-600 dark:text-stone-300 font-medium">
-                          {item.exercise.a} {item.exercise.op === 'multiplication' ? '×' : '÷'} {item.exercise.b} = {item.exercise.result}
+                          {item.exercise.a} {item.exercise.op === 'multiplication' ? '×' : ':'} {item.exercise.b} = {item.exercise.result}
                         </span>
                         {item.correct ? (
                           <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
@@ -1179,7 +1177,24 @@ export default function App() {
 
       {!isPracticing && (
         <footer className="mt-8 text-center text-stone-400 text-xs space-y-1">
-          <p>Gemaakt voor kleine kampioenen 🌟</p>
+          <p className="flex items-center justify-center gap-1">
+            Gemaakt voor kleine kampioenen
+            {/* Dezelfde kroon als in het logo */}
+            <svg viewBox="-86 -56 172 100" className="w-4 h-auto" aria-hidden="true">
+              <defs>
+                <linearGradient id="footer-crown-gold" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stopColor="#fde68a" />
+                  <stop offset="1" stopColor="#f59e0b" />
+                </linearGradient>
+              </defs>
+              <g fill="url(#footer-crown-gold)" stroke="url(#footer-crown-gold)">
+                <path d="M-62 40 L-72 -20 L-30 8 L0 -36 L30 8 L72 -20 L62 40 Z" strokeWidth="7" strokeLinejoin="round" />
+                <circle cx="-72" cy="-24" r="12" />
+                <circle cx="0" cy="-40" r="13" />
+                <circle cx="72" cy="-24" r="12" />
+              </g>
+            </svg>
+          </p>
           <p className="opacity-50 pt-2">v{APP_VERSION}</p>
         </footer>
       )}
