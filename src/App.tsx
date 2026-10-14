@@ -65,6 +65,18 @@ const ENCOURAGE_MESSAGES = [
   'Fouten maken hoort erbij — zo leer je het echt.',
 ];
 
+// Bestanden die Chrome gebruikt voor het icoon en de naam van de geïnstalleerde app
+const INSTALL_ASSETS = ['manifest.json', 'icon-192.png', 'icon-512.png', 'icon.svg', 'apple-touch-icon.png', 'favicon.svg'];
+const INSTALL_ASSETS_VERSION_KEY = 'tafel-install-assets-version';
+
+// Haal manifest en iconen vers op, buiten de browsercache om. Met cache: 'reload'
+// vervangt de browser ook zijn eigen kopie, zodat Chrome een nieuw logo of een
+// nieuwe naam sneller oppikt.
+async function refreshInstallAssets() {
+  const baseUrl = import.meta.env.BASE_URL || '/';
+  await Promise.allSettled(INSTALL_ASSETS.map(file => fetch(`${baseUrl}${file}`, { cache: 'reload' })));
+}
+
 // Score vanaf waar een reeks als geslaagd telt (kroon en "goed bezig"-berichten)
 const GOOD_SCORE_RATIO = 0.7;
 
@@ -331,11 +343,21 @@ export default function App() {
         const data = await res.json();
         if (!cancelled && data.version && data.version !== APP_VERSION) {
           setUpdateAvailable(true);
+          refreshInstallAssets();
         }
       } catch (e) {
         // Offline of netwerkfout: stil negeren, we proberen het later opnieuw
       }
     };
+
+    // Eerste start van een nieuwe versie: manifest en iconen eenmalig vers ophalen
+    try {
+      if (localStorage.getItem(INSTALL_ASSETS_VERSION_KEY) !== APP_VERSION) {
+        refreshInstallAssets().then(() => localStorage.setItem(INSTALL_ASSETS_VERSION_KEY, APP_VERSION));
+      }
+    } catch (e) {
+      // localStorage niet beschikbaar: niet erg, dan slaan we dit over
+    }
 
     checkForUpdate();
     const interval = setInterval(checkForUpdate, VERSION_CHECK_INTERVAL);
