@@ -15,7 +15,6 @@ import {
   Brain,
   ChevronLeft,
   Calculator,
-  Divide,
   Sparkles,
   User,
   History,
@@ -608,7 +607,7 @@ export default function App() {
 
                   <div>
                     <h3 className="text-sm font-bold uppercase tracking-wider text-stone-400 mb-3 flex items-center gap-2">
-                      <Divide className="w-4 h-4" /> Delen (÷)
+                      <span className="w-4 h-4 flex items-center justify-center text-base leading-none">:</span> Delen (:)
                     </h3>
                     <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-11 gap-2">
                       {TABLES.filter(n => n !== 0).map(n => (
@@ -779,11 +778,11 @@ export default function App() {
                         </div>
                         <div className="text-[10px] text-stone-400 flex flex-wrap gap-1">
                           {(result.multiplicationTables?.length ?? 0) > 0 && (
-                            <span>×: {result.multiplicationTables.join(', ')}</span>
+                            <span>× {result.multiplicationTables.join(', ')}</span>
                           )}
                           {(result.multiplicationTables?.length ?? 0) > 0 && (result.divisionTables?.length ?? 0) > 0 && <span>|</span>}
                           {(result.divisionTables?.length ?? 0) > 0 && (
-                            <span>÷: {result.divisionTables.join(', ')}</span>
+                            <span>: {result.divisionTables.join(', ')}</span>
                           )}
                         </div>
                       </button>
@@ -847,7 +846,7 @@ export default function App() {
                       <>
                         <span>{currentExercise.a}</span>
                         <span className="text-emerald-500 text-5xl">
-                          {currentExercise.op === 'multiplication' ? '×' : '÷'}
+                          {currentExercise.op === 'multiplication' ? '×' : ':'}
                         </span>
                         <span>{currentExercise.b}</span>
                       </>
@@ -1013,7 +1012,7 @@ export default function App() {
                   {history.map((item, i) => (
                     <div key={i} className="flex items-center justify-between text-sm">
                       <span className="text-stone-600 dark:text-stone-300">
-                        {item.exercise.a} {item.exercise.op === 'multiplication' ? '×' : '÷'} {item.exercise.b} = {item.exercise.result}
+                        {item.exercise.a} {item.exercise.op === 'multiplication' ? '×' : ':'} {item.exercise.b} = {item.exercise.result}
                       </span>
                       {item.correct ? (
                         <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
@@ -1098,7 +1097,7 @@ export default function App() {
                       <span key={`m-${t}`} className="px-2 py-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 rounded-lg text-xs font-bold">× {t}</span>
                     ))}
                     {selectedSession.divisionTables.map(t => (
-                      <span key={`d-${t}`} className="px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded-lg text-xs font-bold">÷ {t}</span>
+                      <span key={`d-${t}`} className="px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded-lg text-xs font-bold">: {t}</span>
                     ))}
                   </div>
                 </div>
@@ -1109,7 +1108,7 @@ export default function App() {
                     {selectedSession.history.map((item, i) => (
                       <div key={i} className="flex items-center justify-between py-2 border-b border-stone-50 dark:border-stone-800 last:border-0">
                         <span className="text-stone-600 dark:text-stone-300 font-medium">
-                          {item.exercise.a} {item.exercise.op === 'multiplication' ? '×' : '÷'} {item.exercise.b} = {item.exercise.result}
+                          {item.exercise.a} {item.exercise.op === 'multiplication' ? '×' : ':'} {item.exercise.b} = {item.exercise.result}
                         </span>
                         {item.correct ? (
                           <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
