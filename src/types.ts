@@ -20,6 +20,12 @@ export interface UserSettings {
   theme?: ThemePreference; // Light/dark mode preference, defaults to 'auto'
 }
 
+export interface HistoryItem {
+  exercise: Exercise;
+  correct: boolean;
+  givenAnswer?: number | null; // Ontbreekt bij oudere sessies; null = geen antwoord
+}
+
 export interface SessionResult {
   id: string;
   playerName: string;
@@ -31,5 +37,5 @@ export interface SessionResult {
   trackTime?: boolean; // Whether time tracking was active for this session
   multiplicationTables: number[];
   divisionTables: number[];
-  history: { exercise: Exercise; correct: boolean }[];
+  history: HistoryItem[];
 }
