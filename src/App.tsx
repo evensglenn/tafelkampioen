@@ -1177,7 +1177,24 @@ export default function App() {
 
       {!isPracticing && (
         <footer className="mt-8 text-center text-stone-400 text-xs space-y-1">
-          <p>Gemaakt voor kleine kampioenen 🌟</p>
+          <p className="flex items-center justify-center gap-1">
+            Gemaakt voor kleine kampioenen
+            {/* Dezelfde kroon als in het logo */}
+            <svg viewBox="-86 -56 172 100" className="w-4 h-auto" aria-hidden="true">
+              <defs>
+                <linearGradient id="footer-crown-gold" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stopColor="#fde68a" />
+                  <stop offset="1" stopColor="#f59e0b" />
+                </linearGradient>
+              </defs>
+              <g fill="url(#footer-crown-gold)" stroke="url(#footer-crown-gold)">
+                <path d="M-62 40 L-72 -20 L-30 8 L0 -36 L30 8 L72 -20 L62 40 Z" strokeWidth="7" strokeLinejoin="round" />
+                <circle cx="-72" cy="-24" r="12" />
+                <circle cx="0" cy="-40" r="13" />
+                <circle cx="72" cy="-24" r="12" />
+              </g>
+            </svg>
+          </p>
           <p className="opacity-50 pt-2">v{APP_VERSION}</p>
         </footer>
       )}
