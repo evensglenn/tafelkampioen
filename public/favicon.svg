@@ -1,30 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#34d399"/>
-      <stop offset="1" stop-color="#047857"/>
-    </linearGradient>
-    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#fde68a"/>
-      <stop offset="1" stop-color="#f59e0b"/>
-    </linearGradient>
-  </defs>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#34d399"/><stop offset="1" stop-color="#047857"/></linearGradient><linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fde68a"/><stop offset="1" stop-color="#f59e0b"/></linearGradient></defs>
   <rect width="512" height="512" rx="112" fill="url(#bg)"/>
   <!-- Kroon -->
-  <path d="M168 206 L156 128 L210 166 L256 108 L302 166 L356 128 L344 206 Z"
-        fill="url(#gold)" stroke="#b45309" stroke-width="8" stroke-linejoin="round"/>
-  <circle cx="156" cy="124" r="13" fill="#fde68a" stroke="#b45309" stroke-width="6"/>
-  <circle cx="256" cy="102" r="14" fill="#fde68a" stroke="#b45309" stroke-width="6"/>
-  <circle cx="356" cy="124" r="13" fill="#fde68a" stroke="#b45309" stroke-width="6"/>
-  <!-- Maalteken -->
-  <g stroke-linecap="round">
-    <g stroke="#065f46" stroke-opacity="0.35" stroke-width="64" transform="translate(0 8)">
-      <line x1="190" y1="250" x2="322" y2="382"/>
-      <line x1="322" y1="250" x2="190" y2="382"/>
-    </g>
-    <g stroke="#ffffff" stroke-width="64">
-      <line x1="190" y1="250" x2="322" y2="382"/>
-      <line x1="322" y1="250" x2="190" y2="382"/>
-    </g>
-  </g>
+  <g transform="translate(256 150)"><path d="M-62 40 L-72 -20 L-30 8 L0 -36 L30 8 L72 -20 L62 40 Z" fill="url(#gold)" stroke="#b45309" stroke-width="7" stroke-linejoin="round"/><circle cx="-72" cy="-24" r="10" fill="#fde68a" stroke="#b45309" stroke-width="5"/><circle cx="0" cy="-40" r="11" fill="#fde68a" stroke="#b45309" stroke-width="5"/><circle cx="72" cy="-24" r="10" fill="#fde68a" stroke="#b45309" stroke-width="5"/></g>
+  <!-- Maal- en deelteken, met schaduw -->
+  <g transform="translate(0 7)" opacity="0.3"><g transform="translate(176 306)" stroke="#064e3b"><g stroke-linecap="round" stroke-width="44"><line x1="-50" y1="-50" x2="50" y2="50"/><line x1="50" y1="-50" x2="-50" y2="50"/></g></g><g transform="translate(336 306)" fill="#064e3b" stroke="#064e3b"><line x1="-54" y1="0" x2="54" y2="0" stroke-width="40" stroke-linecap="round"/><circle cx="0" cy="-56" r="22"/><circle cx="0" cy="56" r="22"/></g></g>
+  <g transform="translate(176 306)" stroke="#ffffff"><g stroke-linecap="round" stroke-width="44"><line x1="-50" y1="-50" x2="50" y2="50"/><line x1="50" y1="-50" x2="-50" y2="50"/></g></g><g transform="translate(336 306)" fill="#ffffff" stroke="#ffffff"><line x1="-54" y1="0" x2="54" y2="0" stroke-width="40" stroke-linecap="round"/><circle cx="0" cy="-56" r="22"/><circle cx="0" cy="56" r="22"/></g>
 </svg>
