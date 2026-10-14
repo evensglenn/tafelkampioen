@@ -9,25 +9,25 @@
   "theme_color": "#059669",
   "icons": [
     {
-      "src": "/tafelkampioen/icon-192.png?v=e8ce8db4",
+      "src": "/tafelkampioen/icon-192.png?v=21cf78c7",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/tafelkampioen/icon-512.png?v=469ee9b4",
+      "src": "/tafelkampioen/icon-512.png?v=b3b0ccc3",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/tafelkampioen/icon-512.png?v=469ee9b4",
+      "src": "/tafelkampioen/icon-512.png?v=b3b0ccc3",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/tafelkampioen/icon.svg?v=87a0146b",
+      "src": "/tafelkampioen/icon.svg?v=c1ff808c",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
