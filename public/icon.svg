@@ -1,10 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#34d399"/><stop offset="1" stop-color="#047857"/></linearGradient><linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fde68a"/><stop offset="1" stop-color="#f59e0b"/></linearGradient></defs>
+  <!-- Halloween-versie: pompoen met uitgesneden x en : -->
+  <defs>
+    <radialGradient id="bg" cx="0.5" cy="0.45" r="0.75"><stop offset="0" stop-color="#fb923c"/><stop offset="1" stop-color="#c2410c"/></radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fde68a"/><stop offset="1" stop-color="#f59e0b"/></linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="10"/></filter>
+  </defs>
   <!-- Volledige achtergrond: het toestel bepaalt zelf de vorm (cirkel, afgeronde rechthoek, ...) -->
   <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- Ribbels van de pompoen -->
+  <g fill="none" stroke="#9a3412" stroke-width="10" opacity="0.35"><path d="M150 40 Q90 256 150 472"/><path d="M362 40 Q422 256 362 472"/><path d="M256 30 L256 482"/></g>
   <!-- Kroon -->
-  <g transform="translate(256 157)" fill="#064e3b" stroke="#064e3b" opacity="0.3"><path d="M-62 40 L-72 -20 L-30 8 L0 -36 L30 8 L72 -20 L62 40 Z" stroke-width="7" stroke-linejoin="round"/><circle cx="-72" cy="-24" r="12"/><circle cx="0" cy="-40" r="13"/><circle cx="72" cy="-24" r="12"/></g><g transform="translate(256 150)" fill="url(#gold)" stroke="url(#gold)"><path d="M-62 40 L-72 -20 L-30 8 L0 -36 L30 8 L72 -20 L62 40 Z" stroke-width="7" stroke-linejoin="round"/><circle cx="-72" cy="-24" r="12"/><circle cx="0" cy="-40" r="13"/><circle cx="72" cy="-24" r="12"/></g>
-  <!-- Maalteken en deelteken (:), met schaduw -->
-  <g transform="translate(0 7)" opacity="0.3"><g transform="translate(206 306)" stroke="#064e3b"><g stroke-linecap="round" stroke-width="44"><line x1="-50" y1="-50" x2="50" y2="50"/><line x1="50" y1="-50" x2="-50" y2="50"/></g></g><g transform="translate(336 306)" fill="#064e3b"><circle cx="0" cy="-42" r="26"/><circle cx="0" cy="42" r="26"/></g></g>
-  <g transform="translate(206 306)" stroke="#ffffff"><g stroke-linecap="round" stroke-width="44"><line x1="-50" y1="-50" x2="50" y2="50"/><line x1="50" y1="-50" x2="-50" y2="50"/></g></g><g transform="translate(336 306)" fill="#ffffff"><circle cx="0" cy="-42" r="26"/><circle cx="0" cy="42" r="26"/></g>
+  <g transform="translate(256 157)" fill="#7c2d12" stroke="#7c2d12" opacity="0.35"><path d="M-62 40 L-72 -20 L-30 8 L0 -36 L30 8 L72 -20 L62 40 Z" stroke-width="7" stroke-linejoin="round"/><circle cx="-72" cy="-24" r="12"/><circle cx="0" cy="-40" r="13"/><circle cx="72" cy="-24" r="12"/></g>
+  <g transform="translate(256 150)" fill="url(#gold)" stroke="url(#gold)"><path d="M-62 40 L-72 -20 L-30 8 L0 -36 L30 8 L72 -20 L62 40 Z" stroke-width="7" stroke-linejoin="round"/><circle cx="-72" cy="-24" r="12"/><circle cx="0" cy="-40" r="13"/><circle cx="72" cy="-24" r="12"/></g>
+  <!-- Maalteken en deelteken (:), uitgesneden met gloed erachter -->
+  <g filter="url(#glow)" opacity="0.8"><g transform="translate(206 306)" stroke="#fde047"><g stroke-linecap="round" stroke-width="44"><line x1="-50" y1="-50" x2="50" y2="50"/><line x1="50" y1="-50" x2="-50" y2="50"/></g></g><g transform="translate(336 306)" fill="#fde047"><circle cx="0" cy="-42" r="26"/><circle cx="0" cy="42" r="26"/></g></g>
+  <g transform="translate(206 306)" stroke="#3b0f04"><g stroke-linecap="round" stroke-width="44"><line x1="-50" y1="-50" x2="50" y2="50"/><line x1="50" y1="-50" x2="-50" y2="50"/></g></g><g transform="translate(336 306)" fill="#3b0f04"><circle cx="0" cy="-42" r="26"/><circle cx="0" cy="42" r="26"/></g>
 </svg>
