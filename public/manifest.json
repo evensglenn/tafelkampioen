@@ -1,6 +1,6 @@
 {
   "name": "TafelKampioen",
-  "short_name": "Tafels",
+  "short_name": "TafelKampioen",
   "description": "Word de meester van de tafels!",
   "start_url": ".",
   "display": "standalone",
