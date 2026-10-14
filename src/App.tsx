@@ -42,7 +42,7 @@ const THEME_OPTIONS: { value: ThemePreference; label: string; icon: typeof Sun }
 
 const PERFECT_SCORE_MESSAGES = [
   'Wow, geen enkele fout! Jij bent een echte tafelkampioen!',
-  'Foutloos! Dat verdient een gouden medaille! 🏅',
+  'Foutloos! Dat verdient een gouden kroon! 👑',
   'Perfect! Jij hebt deze tafels helemaal onder de knie.',
   'Voltreffer! Alles goed, knap hoor!',
   'Wauw, 100%! Jij bent niet te stoppen!',
@@ -523,6 +523,8 @@ export default function App() {
     </div>
   );
 
+  const isGoodScore = stats.total > 0 && stats.correct / stats.total >= GOOD_SCORE_RATIO;
+
   return (
     <div className={`max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto px-4 min-h-screen flex flex-col font-sans transition-[max-width] duration-300 ${isPracticing ? 'py-4' : 'py-8'}`}>
       {/* Small screens: logo takes the full width, so the toggle gets its own row above it */}
@@ -955,7 +957,7 @@ export default function App() {
               className="glass rounded-3xl p-8 text-center space-y-8 w-full max-w-2xl lg:max-w-3xl mx-auto"
             >
               <div className="space-y-2">
-                {stats.total > 0 && stats.correct / stats.total >= GOOD_SCORE_RATIO ? (
+                {isGoodScore ? (
                   <motion.div
                     initial={{ scale: 0, rotate: -15 }}
                     animate={{ scale: 1, rotate: 0 }}
@@ -987,7 +989,7 @@ export default function App() {
                     <ThumbsUp className="w-12 h-12 text-emerald-600 dark:text-emerald-400" />
                   </div>
                 )}
-                <h2 className="text-3xl font-bold text-stone-800 dark:text-stone-100">Goed gedaan, {settings.playerName}!</h2>
+                <h2 className="text-3xl font-bold text-stone-800 dark:text-stone-100">{isGoodScore ? 'Goed gedaan' : 'Goed geprobeerd'}, {settings.playerName}!</h2>
                 <p className="text-stone-500 dark:text-stone-400">{resultMessage}</p>
               </div>
 
