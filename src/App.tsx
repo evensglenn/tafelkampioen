@@ -516,7 +516,7 @@ export default function App() {
           className={`flex items-center justify-center gap-2 ${isPracticing ? '' : 'gap-3 mb-2'}`}
         >
           <img src={LOGO_URL} alt="" className={`transition-all ${isPracticing ? 'w-7 h-7' : 'w-11 h-11'}`} />
-          <h1 className={`font-bold text-emerald-600 font-display transition-all ${isPracticing ? 'text-xl' : 'text-4xl'}`}>
+          <h1 className={`font-bold text-emerald-600 dark:text-emerald-400 font-display transition-all ${isPracticing ? 'text-xl' : 'text-4xl'}`}>
             TafelKampioen
           </h1>
         </motion.div>
