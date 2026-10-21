@@ -1143,7 +1143,7 @@ export default function App() {
                         <span className="flex items-center gap-2">
                           {item.givenAnswer !== undefined && (
                             <span className="text-xs font-bold text-red-600 dark:text-red-400">
-                              {item.givenAnswer === null ? 'geen antwoord' : <>jouw antwoord: <span className="line-through">{item.givenAnswer}</span></>}
+                              {item.givenAnswer === null ? 'geen antwoord' : <>jouw antwoord: {item.givenAnswer}</>}
                             </span>
                           )}
                           <XCircle className="w-4 h-4 text-red-500 shrink-0" />
@@ -1239,7 +1239,7 @@ export default function App() {
                           <span className="flex items-center gap-2">
                             {item.givenAnswer !== undefined && (
                               <span className="text-xs font-bold text-red-600 dark:text-red-400">
-                                {item.givenAnswer === null ? 'geen antwoord' : <>jouw antwoord: <span className="line-through">{item.givenAnswer}</span></>}
+                                {item.givenAnswer === null ? 'geen antwoord' : <>jouw antwoord: {item.givenAnswer}</>}
                               </span>
                             )}
                             <XCircle className="w-4 h-4 text-red-500 shrink-0" />
