@@ -565,7 +565,7 @@ export default function App() {
   const isGoodScore = stats.total > 0 && stats.correct / stats.total >= GOOD_SCORE_RATIO;
 
   return (
-    <div className={`max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto px-4 min-h-screen flex flex-col font-sans transition-[max-width] duration-300 ${isPracticing ? 'py-4' : 'py-8'}`}>
+    <div className={`max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto px-4 min-h-dvh flex flex-col font-sans transition-[max-width] duration-300 ${isPracticing ? 'py-4' : 'py-8'}`}>
       {/* Small screens: logo takes the full width, so the toggle gets its own row above it */}
       <div className="flex justify-end mb-1.5 lg:hidden">
         {themeToggle}
@@ -866,7 +866,7 @@ export default function App() {
               exit={{ opacity: 0, scale: 1.05 }}
               className="flex-1 flex flex-col items-center w-full"
             >
-              <div className="w-full max-w-md lg:max-w-xl flex-1 flex flex-col glass rounded-3xl p-8 text-center relative overflow-hidden">
+              <div className="w-full max-w-md lg:max-w-xl flex-1 flex flex-col glass rounded-3xl p-5 sm:p-8 text-center relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-2 bg-stone-100 dark:bg-stone-800">
                   <motion.div
                     className="h-full bg-emerald-500"
@@ -887,7 +887,7 @@ export default function App() {
                   </div>
                 )}
 
-                <div className="flex justify-between items-center mb-8">
+                <div className="flex justify-between items-center mb-4 sm:mb-8">
                   <button 
                     onClick={() => {
                       stopTimer();
@@ -930,7 +930,7 @@ export default function App() {
                   )}
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className={useKeypad ? 'space-y-3' : 'space-y-4'}>
                   <div className="relative">
                     <input
                       ref={inputRef}
@@ -945,7 +945,7 @@ export default function App() {
                       // which closes the iPad keyboard between exercises.
                       readOnly={!!feedback}
                       className={`
-                        w-full text-center text-5xl font-bold py-4 rounded-2xl border-4 outline-none transition-all
+                        w-full text-center text-5xl font-bold py-3 sm:py-4 rounded-2xl border-4 outline-none transition-all
                         ${feedback === 'correct' ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' :
                           feedback === 'incorrect' ? 'border-red-500 bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300' :
                           'border-stone-200 dark:border-stone-700 focus:border-emerald-400 bg-white dark:bg-stone-900'}
@@ -971,7 +971,7 @@ export default function App() {
                   </div>
 
                   {useKeypad ? (
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-3 gap-2 sm:gap-3">
                       {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'back', '0', 'submit'].map(key => {
                         const isSubmit = key === 'submit';
                         const isDisabled = !!feedback || (isSubmit && userAnswer === '');
@@ -984,7 +984,7 @@ export default function App() {
                             onClick={isSubmit ? undefined : () => pressKey(key)}
                             disabled={isDisabled}
                             className={`
-                              h-16 rounded-2xl text-3xl font-bold flex items-center justify-center transition-all active:scale-95 select-none touch-manipulation
+                              h-14 sm:h-16 rounded-2xl text-3xl font-bold flex items-center justify-center transition-all active:scale-95 select-none touch-manipulation
                               ${isSubmit
                                 ? isDisabled
                                   ? 'bg-stone-100 text-stone-300 dark:bg-stone-800 dark:text-stone-600'
