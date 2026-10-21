@@ -14,7 +14,7 @@ export interface UserSettings {
   playerName: string;
   multiplicationTables: number[];
   divisionTables: number[];
-  exerciseCount: 10 | 20 | 50 | 'all';
+  exerciseCount: 10 | 20 | 50 | 100 | 'all';
   personalBest?: number; // Lowest average time per sum in ms
   trackTime?: boolean; // Whether to track time and enforce countdown timer
   theme?: ThemePreference; // Light/dark mode preference, defaults to 'auto'

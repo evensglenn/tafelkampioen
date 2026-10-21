@@ -704,8 +704,8 @@ export default function App() {
                     <h3 className="text-sm font-bold uppercase tracking-wider text-stone-400 mb-4 flex items-center gap-2">
                       <Sparkles className="w-4 h-4" /> Aantal sommen
                     </h3>
-                    <div className="grid grid-cols-4 gap-2">
-                      {([10, 20, 50, 'all'] as const).map(count => {
+                    <div className="grid grid-cols-5 gap-2">
+                      {([10, 20, 50, 100, 'all'] as const).map(count => {
                         const isDisabled = count !== 'all' && count > totalPossible;
                         return (
                           <button
