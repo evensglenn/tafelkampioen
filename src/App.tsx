@@ -25,7 +25,9 @@ import {
   RefreshCw,
   Sun,
   Moon,
-  Monitor
+  Monitor,
+  Delete,
+  Check
 } from 'lucide-react';
 import { Exercise, Operation, UserSettings, SessionResult, HistoryItem, ThemePreference } from './types';
 
@@ -148,6 +150,9 @@ export default function App() {
   const [isReloading, setIsReloading] = useState(false);
   
   const inputRef = useRef<HTMLInputElement>(null);
+  // Touch devices get an on-screen number pad instead of the system keyboard
+  // (the iPad keyboard always shows symbols, and opening it makes the page scroll).
+  const [useKeypad] = useState(() => window.matchMedia('(pointer: coarse)').matches);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const handleAnswerRef = useRef<(answer: string | null) => void>(() => {});
 
@@ -262,8 +267,10 @@ export default function App() {
         setMode('results');
         setSessionStartTime(null);
       } else {
+        // Go straight to the next exercise: clearing it first would unmount the
+        // practice screen and its input, which closes the iPad keyboard.
         setExercisePool(prev => prev.slice(1));
-        setCurrentExercise(null); // Clear current to trigger useEffect
+        setCurrentExercise(exercisePool[1] ?? null);
         setUserAnswer('');
         setFeedback(null);
         if (settings.trackTime !== false) {
@@ -285,6 +292,7 @@ export default function App() {
     settings.personalBest,
     sessionStartTime,
     history, 
+    exercisePool,
     playSuccessSound
   ]);
 
@@ -297,6 +305,15 @@ export default function App() {
       setCurrentExercise(exercisePool[0]);
     }
   }, [mode, currentExercise, exercisePool]);
+
+  const pressKey = (key: string) => {
+    if (feedback) return;
+    if (key === 'back') {
+      setUserAnswer(prev => prev.slice(0, -1));
+    } else {
+      setUserAnswer(prev => (prev.length < 3 ? prev + key : prev));
+    }
+  };
 
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -919,11 +936,14 @@ export default function App() {
                       ref={inputRef}
                       autoFocus
                       type="text"
-                      inputMode="numeric"
+                      inputMode={useKeypad ? 'none' : 'numeric'}
                       pattern="[0-9]*"
+                      enterKeyHint="go"
                       value={userAnswer}
                       onChange={(e) => setUserAnswer(e.target.value)}
-                      disabled={!!feedback}
+                      // readOnly instead of disabled: a disabled input loses focus,
+                      // which closes the iPad keyboard between exercises.
+                      readOnly={!!feedback}
                       className={`
                         w-full text-center text-5xl font-bold py-4 rounded-2xl border-4 outline-none transition-all
                         ${feedback === 'correct' ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' :
@@ -950,23 +970,56 @@ export default function App() {
                     </AnimatePresence>
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={!!feedback || userAnswer === ''}
-                    className={`
-                      w-full py-4 rounded-2xl font-bold text-xl shadow-lg transition-all flex items-center justify-center gap-2
-                      ${!!feedback || userAnswer === ''
-                        ? 'bg-stone-100 text-stone-300 dark:bg-stone-800 dark:text-stone-600 cursor-not-allowed'
-                        : 'bg-emerald-600 text-white hover:bg-emerald-700 active:scale-[0.98] shadow-emerald-100 dark:shadow-none'}
-                    `}
-                  >
-                    Controleer
-                  </button>
+                  {useKeypad ? (
+                    <div className="grid grid-cols-3 gap-3">
+                      {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'back', '0', 'submit'].map(key => {
+                        const isSubmit = key === 'submit';
+                        const isDisabled = !!feedback || (isSubmit && userAnswer === '');
+                        return (
+                          <button
+                            key={key}
+                            type={isSubmit ? 'submit' : 'button'}
+                            aria-label={key === 'back' ? 'Wissen' : isSubmit ? 'Controleer' : key}
+                            onPointerDown={(e) => e.preventDefault()}
+                            onClick={isSubmit ? undefined : () => pressKey(key)}
+                            disabled={isDisabled}
+                            className={`
+                              h-16 rounded-2xl text-3xl font-bold flex items-center justify-center transition-all active:scale-95 select-none touch-manipulation
+                              ${isSubmit
+                                ? isDisabled
+                                  ? 'bg-stone-100 text-stone-300 dark:bg-stone-800 dark:text-stone-600'
+                                  : 'bg-emerald-600 text-white shadow-lg shadow-emerald-100 dark:shadow-none'
+                                : 'bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-200 disabled:opacity-50'}
+                            `}
+                          >
+                            {key === 'back' ? <Delete className="w-7 h-7" /> : isSubmit ? <Check className="w-8 h-8" /> : key}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <button
+                      type="submit"
+                      // Keep focus on the input so tapping the button doesn't close the keyboard
+                      onPointerDown={(e) => e.preventDefault()}
+                      disabled={!!feedback || userAnswer === ''}
+                      className={`
+                        w-full py-4 rounded-2xl font-bold text-xl shadow-lg transition-all flex items-center justify-center gap-2
+                        ${!!feedback || userAnswer === ''
+                          ? 'bg-stone-100 text-stone-300 dark:bg-stone-800 dark:text-stone-600 cursor-not-allowed'
+                          : 'bg-emerald-600 text-white hover:bg-emerald-700 active:scale-[0.98] shadow-emerald-100 dark:shadow-none'}
+                      `}
+                    >
+                      Controleer
+                    </button>
+                  )}
                 </form>
 
-                <p className="mt-4 text-stone-400 text-[10px] font-medium uppercase tracking-widest">
-                  Klik op de knop of druk op Enter
-                </p>
+                {!useKeypad && (
+                  <p className="mt-4 text-stone-400 text-[10px] font-medium uppercase tracking-widest">
+                    Klik op de knop of druk op Enter
+                  </p>
+                )}
               </div>
             </motion.div>
           )}
